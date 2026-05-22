@@ -1,0 +1,13 @@
+relationship 28f3a729-d6d1-4163-b40c-13d43d3fa872
+	joinOnDateBehavior: datePartOnly
+	fromColumn: calendar.Date
+	toColumn: LocalDateTable_756e22da-bd16-45e1-836e-bf0c964ea78b.Date
+
+relationship 5f4db3af-b5a4-a4b6-3abb-e6f87e2ec2e1
+	fromColumn: final_table_clean.order_date
+	toColumn: calendar.Date
+
+relationship e60072b6-c395-f8dd-8296-32f20540ef95
+	fromColumn: final_table_clean.customer_id
+	toColumn: dim_customer.customer_id
+

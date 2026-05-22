@@ -1,0 +1,25 @@
+createOrReplace
+
+	table Ranking
+		lineageTag: a1101e1b-702d-4601-9949-862530c7e46b
+
+		measure 'Ranking Value' = SELECTEDVALUE('Ranking'[Ranking], 10)
+			formatString: 0
+			lineageTag: 79192c2d-ed5e-4d88-8594-307e3a401fce
+
+		column Ranking
+			formatString: 0
+			lineageTag: 2a82737e-b7c8-46f7-bf81-6079646b3297
+			summarizeBy: none
+			sourceColumn: [Value]
+
+			extendedProperty ParameterMetadata = {"version":0}
+
+			annotation SummarizationSetBy = User
+
+		partition Ranking = calculated
+			mode: import
+			source = GENERATESERIES(0, 20, 1)
+
+		annotation PBI_Id = dad72e2f280f4645ab626bb761c3e913
+

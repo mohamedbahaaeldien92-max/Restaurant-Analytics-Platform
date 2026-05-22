@@ -1,0 +1,17 @@
+table topbotton
+	lineageTag: 220a2a42-30f5-474c-87b5-39ece9d88d6a
+
+	column Value
+		lineageTag: 24abae90-2f71-4b59-8bc8-cf4aa50c1187
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Value]
+
+		annotation SummarizationSetBy = Automatic
+
+	partition topbotton = calculated
+		mode: import
+		source = {"Top","Botton"}
+
+	annotation PBI_Id = 935f6322f3cb4c80807eb2693d919d81
+

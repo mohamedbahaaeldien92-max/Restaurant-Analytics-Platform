@@ -1,0 +1,168 @@
+table 'KPI Measures'
+	lineageTag: d0726dbc-e8d2-4a37-973c-916c5f5dcade
+
+	measure AvgRating = AVERAGE(final_table_clean[rating])
+		lineageTag: c2896c16-4d08-41c5-b534-cd7f3fcebaae
+
+	measure TotalReviews = COUNTROWS(final_table_clean)
+		lineageTag: 408d5270-e19f-4e65-9900-1d8f08aa4eeb
+
+	measure PositivePercent =
+			VAR Total = COUNTROWS(final_table_clean)
+			VAR Positive =
+			    CALCULATE(COUNTROWS(final_table_clean), final_table_clean[rating] >= 4)
+			RETURN DIVIDE(Positive, Total)
+		lineageTag: a6daa8b7-81e9-47c5-a1b8-8bd205ac434e
+
+	measure NegativePercent =
+			VAR Total = COUNTROWS(final_table_clean)
+			VAR Negative =
+			    CALCULATE(COUNTROWS(final_table_clean), final_table_clean[rating] <= 2)
+			RETURN DIVIDE(Negative, Total)
+		lineageTag: ce1d7f91-9d87-4a70-9627-9cc0c7660a8e
+
+	measure CSIScore =
+			VAR Pos = [PositivePercent]
+			VAR Neg = [NegativePercent]
+			RETURN (Pos - Neg + 1) / 2
+		lineageTag: cd1fbb03-0889-4abd-8eae-8651d031c565
+
+	measure Rating1Count = CALCULATE(COUNTROWS(final_table_clean), final_table_clean[rating] = 1)
+		lineageTag: a7a0a545-dbe6-45f2-bf38-b27e0442714f
+
+	measure Rating2Count = CALCULATE(COUNTROWS(final_table_clean), final_table_clean[rating] = 2)
+		lineageTag: 86ab78e1-16a5-4958-b27f-5a62342ad1d8
+
+	measure Rating3Count = CALCULATE(COUNTROWS(final_table_clean), final_table_clean[rating] = 3)
+		lineageTag: d66328a4-1328-44c6-aeb6-b4f04d659e53
+
+	measure Rating4Count = CALCULATE(COUNTROWS(final_table_clean), final_table_clean[rating] = 4)
+		lineageTag: d6e98d35-853c-4c3f-8e0e-399538b872d7
+
+	measure Rating5Count = CALCULATE(COUNTROWS(final_table_clean), final_table_clean[rating] = 5)
+		lineageTag: 0a4a2ca1-d769-4f02-afc0-bda32b9ff6c8
+
+	measure DineInAvg = CALCULATE(AVERAGE(final_table_clean[rating]), final_table_clean[order_type] = "Dine-in")
+		lineageTag: 09a59a97-f112-4d6e-8f0f-521f68b6e326
+
+	measure TakeawayAvg = CALCULATE(AVERAGE(final_table_clean[rating]), final_table_clean[order_type] = "Takeaway")
+		lineageTag: 322d4df0-09a5-45d3-b69d-fdf4c0b31fac
+
+	measure DeliveryAvg = CALCULATE(AVERAGE(final_table_clean[rating]), final_table_clean[order_type] = "Delivery")
+		lineageTag: 5401798f-43b3-4a4a-9031-b22f5ce473a6
+
+	measure Top10Items =
+			VAR ItemStats =
+			    ADDCOLUMNS(
+			        VALUES(final_table_clean[item_name]),
+			        "@AvgRating", CALCULATE(AVERAGE(final_table_clean[rating]))
+			    )
+			VAR SortedItems =
+			    TOPN(10, ItemStats, [@AvgRating], DESC)
+			RETURN
+			    CONCATENATEX(
+			        SortedItems,
+			        "<div>" & [item_name] & " - " & FORMAT([@AvgRating], "0.00") & "</div>",
+			        ""
+			    )
+		lineageTag: 10a019e1-bd0d-49c2-8edf-1e8458371169
+
+	measure WeightedAvgRating =
+			VAR TotalQty = SUM(final_table_clean[quantity])
+			RETURN DIVIDE(
+			    SUMX(final_table_clean, final_table_clean[rating] * final_table_clean[quantity]),
+			    TotalQty
+			)
+		lineageTag: def18814-41ad-481f-bf62-0703d975a6c5
+
+	measure RatingTrendHTML =
+			VAR Monthly =
+			    ADDCOLUMNS(
+			        SUMMARIZE(final_table_clean, final_table_clean[order_date]),
+			        "@Avg", CALCULATE(AVERAGE(final_table_clean[rating]))
+			    )
+			RETURN
+			    CONCATENATEX(
+			        Monthly,
+			        "<div>" & FORMAT([@Avg], "0.0") & "</div>",
+			        ""
+			    )
+		lineageTag: efd8cc91-dd8f-4d98-a0cb-19c9525cbea3
+
+	measure RiskItem =
+			VAR T =
+			    ADDCOLUMNS(
+			        VALUES(final_table_clean[item_name]),
+			        "@Rev", CALCULATE(SUM(final_table_clean[total_amount])),
+			        "@Rat", CALCULATE(AVERAGE(final_table_clean[rating]))
+			    )
+			VAR F = FILTER(T, [@Rat] < 3.5)
+			RETURN MAXX(TOPN(1, F, [@Rev], DESC), [item_name])
+		lineageTag: cd03e376-22c6-44ac-85b7-903fa8e05623
+
+	measure OpportunityItem =
+			VAR T =
+			    ADDCOLUMNS(
+			        VALUES(final_table_clean[item_name]),
+			        "@Qty", CALCULATE(SUM(final_table_clean[quantity])),
+			        "@Rat", CALCULATE(AVERAGE(final_table_clean[rating]))
+			    )
+			VAR F = FILTER(T, [@Rat] >= 3.8 && [@Rat] < 4.3)
+			RETURN MAXX(TOPN(1, F, [@Qty], DESC), [item_name])
+		lineageTag: a8cd8867-35ff-463a-8489-6cfc7acb78b1
+
+	measure StarItem =
+			VAR T =
+			    ADDCOLUMNS(
+			        VALUES(final_table_clean[item_name]),
+			        "@Rev", CALCULATE(SUM(final_table_clean[total_amount])),
+			        "@Rat", CALCULATE(AVERAGE(final_table_clean[rating]))
+			    )
+			VAR F = FILTER(T, [@Rat] >= 4.2)
+			RETURN MAXX(TOPN(1, F, [@Rev], DESC), [item_name])
+		lineageTag: 86d96470-d4ea-450c-8fc9-bb332362fc41
+
+	measure DeliveryGap =
+			VAR Dine =
+			    CALCULATE(AVERAGE(final_table_clean[rating]), final_table_clean[order_type] = "Dine-in")
+			VAR Delivery =
+			    CALCULATE(AVERAGE(final_table_clean[rating]), final_table_clean[order_type] = "Delivery")
+			RETURN Dine - Delivery
+		lineageTag: d8d5849c-4167-4a8d-a801-74c9b0ae36aa
+
+	measure Top10WeightedItems =
+			VAR T =
+			    ADDCOLUMNS(
+			        VALUES(final_table_clean[item_name]),
+			        "@Rating", CALCULATE(AVERAGE(final_table_clean[rating])),
+			        "@Rev", CALCULATE(SUM(final_table_clean[total_amount]))
+			    )
+			VAR TopItems = TOPN(10, T, [@Rev], DESC)
+			RETURN
+			    CONCATENATEX(
+			        TopItems,
+			        "<div>" & [item_name] & " - " & FORMAT([@Rating], "0.0") & "</div>",
+			        ""
+			    )
+		lineageTag: 624daf4d-b012-4fa0-9b50-b0b9a26675bb
+
+	measure DistributionHTML = "<div>Ready</div>"
+		lineageTag: 747bd742-8e09-48a4-bda4-4e092231a411
+
+	column Column
+		formatString: 0
+		lineageTag: 145dd775-4733-4533-977c-282155deb269
+		summarizeBy: sum
+		isNameInferred
+		sourceColumn: [Column]
+
+		annotation SummarizationSetBy = Automatic
+
+	partition 'KPI Measures' = calculated
+		mode: import
+		source = Row("Column", BLANK())
+
+	annotation PBI_Id = 1c4c21e9f8134279a309eff600b21d65
+
+	annotation 436ba87b-9c83-4389-a31b-ebd06a36be98 = {"Expression":""}
+

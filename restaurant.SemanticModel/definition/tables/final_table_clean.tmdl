@@ -1,0 +1,177 @@
+table final_table_clean
+	lineageTag: 04de7860-5b9c-4302-aa8e-30af7b55af8e
+
+	column order_id
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: f33c3b15-6f1d-49b2-a2f3-742fa94adee1
+		summarizeBy: none
+		sourceColumn: order_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column order_date
+		dataType: dateTime
+		formatString: Long Date
+		sourceProviderType: date
+		lineageTag: 5b729591-2659-4707-b43f-4f3e1815e634
+		summarizeBy: none
+		sourceColumn: order_date
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column hour
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 4cd91dc2-8888-4f99-99ba-ea5d4f89d2c1
+		summarizeBy: none
+		sourceColumn: hour
+
+		annotation SummarizationSetBy = User
+
+	column category
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: a590be90-0ac4-4b09-9def-e4a6e4acbc47
+		summarizeBy: none
+		sourceColumn: category
+
+		annotation SummarizationSetBy = Automatic
+
+	column item_name
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: cf4849c0-f36a-44dc-b9c3-116400054215
+		summarizeBy: none
+		sourceColumn: item_name
+
+		annotation SummarizationSetBy = Automatic
+
+	column price
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 54209da0-3745-41df-818d-45fe66c6eeed
+		summarizeBy: sum
+		sourceColumn: price
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column quantity
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 744b2e39-52c6-4d06-b2ca-fcb2d66b08c1
+		summarizeBy: sum
+		sourceColumn: quantity
+
+		annotation SummarizationSetBy = Automatic
+
+	column discount
+		dataType: double
+		sourceProviderType: double
+		lineageTag: dd9f5ae8-4558-4348-a460-1277c57931f4
+		summarizeBy: sum
+		sourceColumn: discount
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column total_amount
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 679bcd6d-b332-4746-b125-0afa2076ecce
+		summarizeBy: sum
+		sourceColumn: total_amount
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column branch
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: edea6353-2341-4186-bebb-762bb6d0e979
+		summarizeBy: none
+		sourceColumn: branch
+
+		annotation SummarizationSetBy = Automatic
+
+	column payment_method
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 7791580f-76cd-4b21-8fb5-d3c224a47e88
+		summarizeBy: none
+		sourceColumn: payment_method
+
+		annotation SummarizationSetBy = Automatic
+
+	column order_type
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 9e24f6db-5522-4c8d-918b-6a69a86c2e1b
+		summarizeBy: none
+		sourceColumn: order_type
+
+		annotation SummarizationSetBy = Automatic
+
+	column customer_id
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 0dcf7688-4f66-4fcc-844b-c251a4954a75
+		summarizeBy: none
+		sourceColumn: customer_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column rating
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 3fff59dd-f571-4572-9fe9-90eacf11c53e
+		summarizeBy: sum
+		sourceColumn: rating
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column is_weekend
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		sourceProviderType: bit
+		lineageTag: f440058c-4c8c-4c75-b223-a02959c235e8
+		summarizeBy: none
+		sourceColumn: is_weekend
+
+		annotation SummarizationSetBy = Automatic
+
+	column source
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 9c49ae16-197c-4151-b78a-586ea6ffd7fc
+		summarizeBy: none
+		sourceColumn: source
+
+		annotation SummarizationSetBy = Automatic
+
+	partition final_table_clean = m
+		mode: directQuery
+		source =
+				let
+				    Source = DatabricksMultiCloud.Catalogs("dbc-331456cc-ae18.cloud.databricks.com", "/sql/1.0/warehouses/396b5eee0624a3cf", [Catalog=null, Database=null, QueryTags=null, EnableAutomaticProxyDiscovery=null, Implementation="2.0"]),
+				    workspace_Database = Source{[Name="workspace",Kind="Database"]}[Data],
+				    default_Schema = workspace_Database{[Name="default",Kind="Schema"]}[Data],
+				    final_table_clean_Table = default_Schema{[Name="final_table_clean",Kind="Table"]}[Data],
+				    #"Changed Type" = Table.TransformColumnTypes(final_table_clean_Table,{{"order_id", type text}, {"customer_id", type text}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_ResultType = Table
+
+	annotation PBI_NavigationStepName = Navigation
+

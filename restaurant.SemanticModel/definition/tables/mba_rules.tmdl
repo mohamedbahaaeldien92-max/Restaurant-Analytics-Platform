@@ -1,0 +1,99 @@
+table mba_rules
+	lineageTag: af6f7e16-45e1-4457-9684-80d4735320cf
+
+	column rank
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: 3b63824c-00e4-481c-a0c2-4a97469153d0
+		summarizeBy: sum
+		sourceColumn: rank
+
+		annotation SummarizationSetBy = Automatic
+
+	column Product_A
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: 0bf93a09-c367-4eb2-8152-fddac863aeb7
+		summarizeBy: none
+		sourceColumn: Product_A
+
+		annotation SummarizationSetBy = Automatic
+
+	column Product_B
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: cb3d9bb2-1ac6-4505-a2c7-3401d18f3174
+		summarizeBy: none
+		sourceColumn: Product_B
+
+		annotation SummarizationSetBy = Automatic
+
+	column support
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 41928d4d-3398-424e-b1d2-8c5c90c8bc63
+		summarizeBy: sum
+		sourceColumn: support
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column confidence
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 6268548f-305a-493f-a29d-472748184979
+		summarizeBy: sum
+		sourceColumn: confidence
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column lift
+		dataType: double
+		sourceProviderType: double
+		lineageTag: c108d5f4-52d7-49e0-b79d-be0d5629fac4
+		summarizeBy: sum
+		sourceColumn: lift
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column Strength
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: d4bd5c7c-50ff-482b-a3e3-6e63cf2584a1
+		summarizeBy: none
+		sourceColumn: Strength
+
+		annotation SummarizationSetBy = Automatic
+
+	column Score
+		dataType: double
+		sourceProviderType: double
+		lineageTag: ded5dc0e-dc84-4c01-9473-821b905136ad
+		summarizeBy: sum
+		sourceColumn: Score
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	partition mba_rules = m
+		mode: directQuery
+		source =
+				let
+				    Source = DatabricksMultiCloud.Catalogs("dbc-331456cc-ae18.cloud.databricks.com", "/sql/1.0/warehouses/396b5eee0624a3cf", [Catalog=null, Database=null, QueryTags=null, EnableAutomaticProxyDiscovery=null, Implementation="2.0"]),
+				    workspace_Database = Source{[Name="workspace",Kind="Database"]}[Data],
+				    default_Schema = workspace_Database{[Name="default",Kind="Schema"]}[Data],
+				    mba_rules_Table = default_Schema{[Name="mba_rules",Kind="Table"]}[Data]
+				in
+				    mba_rules_Table
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

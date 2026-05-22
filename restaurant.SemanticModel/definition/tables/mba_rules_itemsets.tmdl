@@ -1,0 +1,47 @@
+table mba_rules_itemsets
+	lineageTag: 247d2f8f-fa5b-41d8-8a1e-4d84de6d1fdd
+
+	column product
+		dataType: string
+		sourceProviderType: nvarchar(max)
+		lineageTag: b4642578-9b5d-4c2f-aa0b-7844083a7d24
+		summarizeBy: none
+		sourceColumn: product
+
+		annotation SummarizationSetBy = Automatic
+
+	column freq
+		dataType: int64
+		formatString: 0
+		sourceProviderType: bigint
+		lineageTag: aa4997d4-ff8b-4832-97ee-b6eb3b21f049
+		summarizeBy: sum
+		sourceColumn: freq
+
+		annotation SummarizationSetBy = Automatic
+
+	column frequency_rank
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: edeb1f6e-dff5-4ddd-9a38-6003b70061c8
+		summarizeBy: sum
+		sourceColumn: frequency_rank
+
+		annotation SummarizationSetBy = Automatic
+
+	partition mba_rules_itemsets = m
+		mode: directQuery
+		source =
+				let
+				    Source = DatabricksMultiCloud.Catalogs("dbc-331456cc-ae18.cloud.databricks.com", "/sql/1.0/warehouses/396b5eee0624a3cf", [Catalog=null, Database=null, QueryTags=null, EnableAutomaticProxyDiscovery=null, Implementation="2.0"]),
+				    workspace_Database = Source{[Name="workspace",Kind="Database"]}[Data],
+				    default_Schema = workspace_Database{[Name="default",Kind="Schema"]}[Data],
+				    mba_rules_itemsets_Table = default_Schema{[Name="mba_rules_itemsets",Kind="Table"]}[Data]
+				in
+				    mba_rules_itemsets_Table
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

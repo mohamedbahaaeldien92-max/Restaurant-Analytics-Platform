@@ -1,0 +1,125 @@
+createOrReplace
+
+    ref table 'KPI Measures'
+
+        measure AvgRating =
+            AVERAGE(final_table_clean[rating])
+
+        measure TotalReviews =
+            COUNTROWS(final_table_clean)
+
+        measure PositivePercent =
+            VAR Total = COUNTROWS(final_table_clean)
+            VAR Positive =
+                CALCULATE(COUNTROWS(final_table_clean), final_table_clean[rating] >= 4)
+            RETURN DIVIDE(Positive, Total)
+
+        measure NegativePercent =
+            VAR Total = COUNTROWS(final_table_clean)
+            VAR Negative =
+                CALCULATE(COUNTROWS(final_table_clean), final_table_clean[rating] <= 2)
+            RETURN DIVIDE(Negative, Total)
+
+        measure CSIScore =
+            VAR Pos = [PositivePercent]
+            VAR Neg = [NegativePercent]
+            RETURN (Pos - Neg + 1) / 2
+
+        measure WeightedAvgRating =
+            VAR TotalQty = SUM(final_table_clean[quantity])
+            RETURN DIVIDE(
+                SUMX(final_table_clean, final_table_clean[rating] * final_table_clean[quantity]),
+                TotalQty
+            )
+
+        measure Rating1Count =
+            CALCULATE(COUNTROWS(final_table_clean), final_table_clean[rating] = 1)
+
+        measure Rating2Count =
+            CALCULATE(COUNTROWS(final_table_clean), final_table_clean[rating] = 2)
+
+        measure Rating3Count =
+            CALCULATE(COUNTROWS(final_table_clean), final_table_clean[rating] = 3)
+
+        measure Rating4Count =
+            CALCULATE(COUNTROWS(final_table_clean), final_table_clean[rating] = 4)
+
+        measure Rating5Count =
+            CALCULATE(COUNTROWS(final_table_clean), final_table_clean[rating] = 5)
+
+        measure RatingTrendHTML =
+            VAR Monthly =
+                ADDCOLUMNS(
+                    SUMMARIZE(final_table_clean, final_table_clean[order_date]),
+                    "@Avg", CALCULATE(AVERAGE(final_table_clean[rating]))
+                )
+            RETURN
+                CONCATENATEX(
+                    Monthly,
+                    "<div>" & FORMAT([@Avg], "0.0") & "</div>",
+                    ""
+                )
+
+        measure DineInAvg =
+            CALCULATE(AVERAGE(final_table_clean[rating]), final_table_clean[order_type] = "Dine-in")
+
+        measure TakeawayAvg =
+            CALCULATE(AVERAGE(final_table_clean[rating]), final_table_clean[order_type] = "Takeaway")
+
+        measure DeliveryAvg =
+            CALCULATE(AVERAGE(final_table_clean[rating]), final_table_clean[order_type] = "Delivery")
+
+        measure RiskItem =
+            VAR T =
+                ADDCOLUMNS(
+                    VALUES(final_table_clean[item_name]),
+                    "@Rev", CALCULATE(SUM(final_table_clean[total_amount])),
+                    "@Rat", CALCULATE(AVERAGE(final_table_clean[rating]))
+                )
+            VAR F = FILTER(T, [@Rat] < 3.5)
+            RETURN MAXX(TOPN(1, F, [@Rev], DESC), [item_name])
+
+        measure OpportunityItem =
+            VAR T =
+                ADDCOLUMNS(
+                    VALUES(final_table_clean[item_name]),
+                    "@Qty", CALCULATE(SUM(final_table_clean[quantity])),
+                    "@Rat", CALCULATE(AVERAGE(final_table_clean[rating]))
+                )
+            VAR F = FILTER(T, [@Rat] >= 3.8 && [@Rat] < 4.3)
+            RETURN MAXX(TOPN(1, F, [@Qty], DESC), [item_name])
+
+        measure StarItem =
+            VAR T =
+                ADDCOLUMNS(
+                    VALUES(final_table_clean[item_name]),
+                    "@Rev", CALCULATE(SUM(final_table_clean[total_amount])),
+                    "@Rat", CALCULATE(AVERAGE(final_table_clean[rating]))
+                )
+            VAR F = FILTER(T, [@Rat] >= 4.2)
+            RETURN MAXX(TOPN(1, F, [@Rev], DESC), [item_name])
+
+        measure DeliveryGap =
+            VAR Dine =
+                CALCULATE(AVERAGE(final_table_clean[rating]), final_table_clean[order_type] = "Dine-in")
+            VAR Delivery =
+                CALCULATE(AVERAGE(final_table_clean[rating]), final_table_clean[order_type] = "Delivery")
+            RETURN Dine - Delivery
+
+        measure Top10WeightedItems =
+            VAR T =
+                ADDCOLUMNS(
+                    VALUES(final_table_clean[item_name]),
+                    "@Rating", CALCULATE(AVERAGE(final_table_clean[rating])),
+                    "@Rev", CALCULATE(SUM(final_table_clean[total_amount]))
+                )
+            VAR TopItems = TOPN(10, T, [@Rev], DESC)
+            RETURN
+                CONCATENATEX(
+                    TopItems,
+                    "<div>" & [item_name] & " - " & FORMAT([@Rating], "0.0") & "</div>",
+                    ""
+                )
+
+        measure DistributionHTML =
+            "<div>Ready</div>"

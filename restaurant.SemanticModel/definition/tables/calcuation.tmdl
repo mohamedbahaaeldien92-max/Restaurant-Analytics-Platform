@@ -1,0 +1,1491 @@
+table calcuation
+	lineageTag: 948bafea-7e82-42ab-b783-1fdad6831d5e
+
+	measure 'Total Sales' = SUM(final_table_clean[total_amount])
+		lineageTag: b1936188-8c6b-4bf3-9d61-1aa7064d1999
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure Orders = COUNT(final_table_clean[order_id])
+		formatString: 0
+		lineageTag: 62746132-b2fd-410c-94a4-d6b10ee87f90
+
+	measure 'Number of branches' = DISTINCTCOUNT(final_table_clean[branch])
+		formatString: 0
+		lineageTag: 6c5faf76-4e39-47d7-975e-b3edf8aad89e
+
+	measure 'Average review' = AVERAGE(final_table_clean[rating])
+		formatString: 0.0
+		lineageTag: b3793416-9323-4811-bc93-b7f3b8bd6c16
+
+	measure 'Customer review' =
+			
+			VAR Rating = [Average review]
+			VAR RoundedStars = ROUND(Rating, 0)
+			RETURN
+			REPT("⭐", RoundedStars) &
+			REPT("☆", 5 - RoundedStars) &
+			UNICHAR(10) &
+			FORMAT(Rating, "0.00")
+		lineageTag: 50fcb2dc-3e98-477d-98d4-bf7dce1ef824
+
+	measure Customer = DISTINCTCOUNT(final_table_clean[customer_id])
+		formatString: 0
+		lineageTag: 5430a99e-1104-486d-b367-2dc765eb07a6
+
+	measure 'Total Items' = SUM(final_table_clean[quantity])
+		formatString: 0
+		lineageTag: 72370eda-3ce4-44c1-bdb6-b80d69741d2c
+
+	measure AOV = DIVIDE([Total Sales],[Orders])
+		lineageTag: 8db3cd9b-d92d-4864-927a-57e61f9703cd
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure RepeatCustomers = ```
+			
+			    CALCULATE(
+			        DISTINCTCOUNT(final_table_clean[customer_id]),
+			        FILTER(
+			            VALUES(final_table_clean[customer_id]),
+			            CALCULATE(COUNTROWS(final_table_clean)) > 1
+			        )
+			    )
+			```
+		formatString: 0
+		lineageTag: 95a19eec-fb64-48c5-8260-f5660fbc8bae
+
+	measure firstorder = YEAR(CALCULATE(MIN(final_table_clean[order_date])))
+		formatString: 0
+		lineageTag: 6fd11291-ec1a-4d73-b617-d36bfbe61def
+
+	measure 'AVG Discount%' = AVERAGE(final_table_clean[discount])
+		formatString: 0.00%;-0.00%;0.00%
+		lineageTag: 8c9d7bd9-59c1-46b2-817a-aa9dbe1a99d0
+
+	measure 'MBA Data JSON' =
+			
+			
+			VAR AllData =
+			    SELECTCOLUMNS(
+			        mba_rules,
+			        "pa", TRIM ( mba_rules[Product_A] ),
+			        "pb", TRIM ( mba_rules[Product_B] ),
+			        "lf", mba_rules[lift],
+			        "cf", mba_rules[confidence],
+			        "st", TRIM ( mba_rules[Strength] )
+			    )
+			
+			VAR MaxLift   = MAXX ( AllData, [lf] )
+			VAR MinLift   = MINX ( AllData, [lf] )
+			VAR AvgLift   = AVERAGEX ( AllData, [lf] )
+			VAR TotalRows = COUNTROWS ( AllData )
+			
+			/* ── الإصلاح: TOPN يضمن صف واحد فقط ثم نقرأ pa و pb منه ── */
+			VAR TopLift = MAXX ( AllData, [lf] )
+			
+			VAR TopRow =
+			    TOPN (
+			        1,
+			        FILTER ( AllData, [lf] = TopLift ),
+			        [pa], ASC
+			    )
+			
+			VAR TopA    = MAXX ( TopRow, [pa] )
+			VAR TopB    = MAXX ( TopRow, [pb] )
+			VAR TopPair = TopA & " + " & TopB
+			
+			VAR TotalRowsFmt = FORMAT ( TotalRows, "0"   )
+			VAR AvgLiftFmt   = FORMAT ( AvgLift,   "0.0" )
+			VAR MaxLiftFmt   = FORMAT ( MaxLift,   "0.0" )
+			VAR MinLiftFmt   = FORMAT ( MinLift,   "0.0" )
+			
+			VAR EdgesJSON =
+			    CONCATENATEX (
+			        AllData,
+			        "{" &
+			            """a""" & ":""" & [pa] & """," &
+			            """b""" & ":""" & [pb] & """," &
+			            """lift""" & ":" & FORMAT ( [lf], "0.00" ) & "," &
+			            """conf""" & ":" & FORMAT ( [cf] * 100, "0.00" ) & "," &
+			            """str""" & ":""" & [st] & """" &
+			        "}",
+			        ","
+			    )
+			
+			RETURN
+			"{" &
+			    """rows"":"  & TotalRowsFmt & "," &
+			    """avg"":"   & AvgLiftFmt   & "," &
+			    """max"":"   & MaxLiftFmt   & "," &
+			    """min"":"   & MinLiftFmt   & "," &
+			    """top"":""" & TopPair      & """," &
+			    """edges"":[" & EdgesJSON   & "]" &
+			"}"
+		lineageTag: caa0004a-607b-4705-9b39-c8f5b39062ca
+
+	measure 'MBA Network Visual' =
+			
+			
+			VAR D     = "{""avg"": 1.0971, ""max"": 1.1091, ""top"": ""شيش طاووق + محشي باذنجان"", ""edges"": [{""a"": ""بابا غنوج"", ""b"": ""سلطة بلدي"", ""lift"": 1.0974, ""conf"": 21.05, ""str"": ""Strong""}, {""a"": ""بابا غنوج"", ""b"": ""شاي"", ""lift"": 1.1037, ""conf"": 11.23, ""str"": ""Very Strong""}, {""a"": ""بابا غنوج"", ""b"": ""شيش طاووق"", ""lift"": 1.1045, ""conf"": 21.21, ""str"": ""Very Strong""}, {""a"": ""بابا غنوج"", ""b"": ""طاجن بامية"", ""lift"": 1.0994, ""conf"": 29.89, ""str"": ""Strong""}, {""a"": ""بابا غنوج"", ""b"": ""طاجن فراخ"", ""lift"": 1.0962, ""conf"": 37.55, ""str"": ""Strong""}, {""a"": ""بابا غنوج"", ""b"": ""طاجن ملوخية"", ""lift"": 1.0995, ""conf"": 29.92, ""str"": ""Strong""}, {""a"": ""بابا غنوج"", ""b"": ""طحينة"", ""lift"": 1.0957, ""conf"": 44.42, ""str"": ""Strong""}, {""a"": ""بابا غنوج"", ""b"": ""عصير قصب"", ""lift"": 1.0973, ""conf"": 29.85, ""str"": ""Strong""}, {""a"": ""بابا غنوج"", ""b"": ""عصير مانجو"", ""lift"": 1.0923, ""conf"": 50.39, ""str"": ""Strong""}, {""a"": ""بابا غنوج"", ""b"": ""كباب"", ""lift"": 1.0924, ""conf"": 44.23, ""str"": ""Strong""}, {""a"": ""بابا غنوج"", ""b"": ""كفتة"", ""lift"": 1.0992, ""conf"": 29.96, ""str"": ""Strong""}, {""a"": ""بابا غنوج"", ""b"": ""محشي باذنجان"", ""lift"": 1.1041, ""conf"": 21.27, ""str"": ""Very Strong""}, {""a"": ""بابا غنوج"", ""b"": ""محشي كوسة"", ""lift"": 1.0973, ""conf"": 37.59, ""str"": ""Strong""}, {""a"": ""بابا غنوج"", ""b"": ""محشي ورق عنب"", ""lift"": 1.0967, ""conf"": 37.57, ""str"": ""Strong""}, {""a"": ""سلطة بلدي"", ""b"": ""بابا غنوج"", ""lift"": 1.0974, ""conf"": 29.84, ""str"": ""Strong""}, {""a"": ""سلطة بلدي"", ""b"": ""شاي"", ""lift"": 1.1023, ""conf"": 11.22, ""str"": ""Very Strong""}, {""a"": ""سلطة بلدي"", ""b"": ""شيش طاووق"", ""lift"": 1.109, ""conf"": 21.29, ""str"": ""Very Strong""}, {""a"": ""سلطة بلدي"", ""b"": ""طاجن بامية"", ""lift"": 1.1034, ""conf"": 30.0, ""str"": ""Very Strong""}, {""a"": ""سلطة بلدي"", ""b"": ""طاجن فراخ"", ""lift"": 1.0978, ""conf"": 37.6, ""str"": ""Strong""}, {""a"": ""سلطة بلدي"", ""b"": ""طاجن ملوخية"", ""lift"": 1.1052, ""conf"": 30.08, ""str"": ""Very Strong""}, {""a"": ""سلطة بلدي"", ""b"": ""طحينة"", ""lift"": 1.0968, ""conf"": 44.47, ""str"": ""Strong""}, {""a"": ""سلطة بلدي"", ""b"": ""عصير قصب"", ""lift"": 1.103, ""conf"": 30.01, ""str"": ""Very Strong""}, {""a"": ""سلطة بلدي"", ""b"": ""عصير مانجو"", ""lift"": 1.0945, ""conf"": 50.49, ""str"": ""Strong""}, {""a"": ""سلطة بلدي"", ""b"": ""كباب"", ""lift"": 1.0945, ""conf"": 44.32, ""str"": ""Strong""}, {""a"": ""سلطة بلدي"", ""b"": ""كفتة"", ""lift"": 1.1055, ""conf"": 30.13, ""str"": ""Very Strong""}, {""a"": ""سلطة بلدي"", ""b"": ""محشي باذنجان"", ""lift"": 1.1057, ""conf"": 21.3, ""str"": ""Very Strong""}, {""a"": ""سلطة بلدي"", ""b"": ""محشي كوسة"", ""lift"": 1.1008, ""conf"": 37.71, ""str"": ""Very Strong""}, {""a"": ""سلطة بلدي"", ""b"": ""محشي ورق عنب"", ""lift"": 1.0987, ""conf"": 37.64, ""str"": ""Strong""}, {""a"": ""شاي"", ""b"": ""بابا غنوج"", ""lift"": 1.1037, ""conf"": 30.01, ""str"": ""Very Strong""}, {""a"": ""شاي"", ""b"": ""سلطة بلدي"", ""lift"": 1.1023, ""conf"": 21.14, ""str"": ""Very Strong""}, {""a"": ""شاي"", ""b"": ""شيش طاووق"", ""lift"": 1.109, ""conf"": 21.29, ""str"": ""Very Strong""}, {""a"": ""شاي"", ""b"": ""طاجن بامية"", ""lift"": 1.1017, ""conf"": 29.95, ""str"": ""Very Strong""}, {""a"": ""شاي"", ""b"": ""طاجن فراخ"", ""lift"": 1.1006, ""conf"": 37.69, ""str"": ""Very Strong""}, {""a"": ""شاي"", ""b"": ""طاجن ملوخية"", ""lift"": 1.103, ""conf"": 30.02, ""str"": ""Very Strong""}, {""a"": ""شاي"", ""b"": ""طحينة"", ""lift"": 1.0996, ""conf"": 44.58, ""str"": ""Strong""}, {""a"": ""شاي"", ""b"": ""عصير قصب"", ""lift"": 1.0976, ""conf"": 29.86, ""str"": ""Strong""}, {""a"": ""شاي"", ""b"": ""عصير مانجو"", ""lift"": 1.096, ""conf"": 50.57, ""str"": ""Strong""}, {""a"": ""شاي"", ""b"": ""كباب"", ""lift"": 1.101, ""conf"": 44.58, ""str"": ""Very Strong""}, {""a"": ""شاي"", ""b"": ""كفتة"", ""lift"": 1.1046, ""conf"": 30.11, ""str"": ""Very Strong""}, {""a"": ""شاي"", ""b"": ""محشي باذنجان"", ""lift"": 1.1062, ""conf"": 21.31, ""str"": ""Very Strong""}, {""a"": ""شاي"", ""b"": ""محشي كوسة"", ""lift"": 1.1025, ""conf"": 37.77, ""str"": ""Very Strong""}, {""a"": ""شاي"", ""b"": ""محشي ورق عنب"", ""lift"": 1.0987, ""conf"": 37.64, ""str"": ""Strong""}, {""a"": ""شيش طاووق"", ""b"": ""بابا غنوج"", ""lift"": 1.1045, ""conf"": 30.04, ""str"": ""Very Strong""}, {""a"": ""شيش طاووق"", ""b"": ""سلطة بلدي"", ""lift"": 1.109, ""conf"": 21.27, ""str"": ""Very Strong""}, {""a"": ""شيش طاووق"", ""b"": ""شاي"", ""lift"": 1.109, ""conf"": 11.29, ""str"": ""Very Strong""}, {""a"": ""شيش طاووق"", ""b"": ""طاجن بامية"", ""lift"": 1.1017, ""conf"": 29.95, ""str"": ""Very Strong""}, {""a"": ""شيش طاووق"", ""b"": ""طاجن فراخ"", ""lift"": 1.0959, ""conf"": 37.53, ""str"": ""Strong""}, {""a"": ""شيش طاووق"", ""b"": ""طاجن ملوخية"", ""lift"": 1.1044, ""conf"": 30.05, ""str"": ""Very Strong""}, {""a"": ""شيش طاووق"", ""b"": ""طحينة"", ""lift"": 1.0948, ""conf"": 44.38, ""str"": ""Strong""}, {""a"": ""شيش طاووق"", ""b"": ""عصير قصب"", ""lift"": 1.1043, ""conf"": 30.04, ""str"": ""Very Strong""}, {""a"": ""شيش طاووق"", ""b"": ""عصير مانجو"", ""lift"": 1.09, ""conf"": 50.29, ""str"": ""Strong""}, {""a"": ""شيش طاووق"", ""b"": ""كباب"", ""lift"": 1.095, ""conf"": 44.34, ""str"": ""Strong""}, {""a"": ""شيش طاووق"", ""b"": ""كفتة"", ""lift"": 1.1011, ""conf"": 30.01, ""str"": ""Very Strong""}, {""a"": ""شيش طاووق"", ""b"": ""محشي باذنجان"", ""lift"": 1.1091, ""conf"": 21.37, ""str"": ""Very Strong""}, {""a"": ""شيش طاووق"", ""b"": ""محشي كوسة"", ""lift"": 1.0986, ""conf"": 37.63, ""str"": ""Strong""}, {""a"": ""شيش طاووق"", ""b"": ""محشي ورق عنب"", ""lift"": 1.0998, ""conf"": 37.68, ""str"": ""Strong""}, {""a"": ""طاجن بامية"", ""b"": ""بابا غنوج"", ""lift"": 1.0994, ""conf"": 29.9, ""str"": ""Strong""}, {""a"": ""طاجن بامية"", ""b"": ""سلطة بلدي"", ""lift"": 1.1034, ""conf"": 21.17, ""str"": ""Very Strong""}, {""a"": ""طاجن بامية"", ""b"": ""شاي"", ""lift"": 1.1017, ""conf"": 11.21, ""str"": ""Very Strong""}, {""a"": ""طاجن بامية"", ""b"": ""شيش طاووق"", ""lift"": 1.1017, ""conf"": 21.15, ""str"": ""Very Strong""}, {""a"": ""طاجن بامية"", ""b"": ""طاجن فراخ"", ""lift"": 1.0971, ""conf"": 37.57, ""str"": ""Strong""}, {""a"": ""طاجن بامية"", ""b"": ""طاجن ملوخية"", ""lift"": 1.1001, ""conf"": 29.94, ""str"": ""Very Strong""}, {""a"": ""طاجن بامية"", ""b"": ""طحينة"", ""lift"": 1.0951, ""conf"": 44.4, ""str"": ""Strong""}, {""a"": ""طاجن بامية"", ""b"": ""عصير قصب"", ""lift"": 1.1027, ""conf"": 30.0, ""str"": ""Very Strong""}, {""a"": ""طاجن بامية"", ""b"": ""عصير مانجو"", ""lift"": 1.0907, ""conf"": 50.32, ""str"": ""Strong""}, {""a"": ""طاجن بامية"", ""b"": ""كباب"", ""lift"": 1.0931, ""conf"": 44.26, ""str"": ""Strong""}, {""a"": ""طاجن بامية"", ""b"": ""كفتة"", ""lift"": 1.1016, ""conf"": 30.02, ""str"": ""Very Strong""}, {""a"": ""طاجن بامية"", ""b"": ""محشي باذنجان"", ""lift"": 1.1041, ""conf"": 21.27, ""str"": ""Very Strong""}, {""a"": ""طاجن بامية"", ""b"": ""محشي كوسة"", ""lift"": 1.097, ""conf"": 37.58, ""str"": ""Strong""}, {""a"": ""طاجن بامية"", ""b"": ""محشي ورق عنب"", ""lift"": 1.0961, ""conf"": 37.55, ""str"": ""Strong""}, {""a"": ""طاجن فراخ"", ""b"": ""بابا غنوج"", ""lift"": 1.0962, ""conf"": 29.81, ""str"": ""Strong""}, {""a"": ""طاجن فراخ"", ""b"": ""سلطة بلدي"", ""lift"": 1.0978, ""conf"": 21.06, ""str"": ""Strong""}, {""a"": ""طاجن فراخ"", ""b"": ""شاي"", ""lift"": 1.1006, ""conf"": 11.2, ""str"": ""Very Strong""}, {""a"": ""طاجن فراخ"", ""b"": ""شيش طاووق"", ""lift"": 1.0959, ""conf"": 21.04, ""str"": ""Strong""}, {""a"": ""طاجن فراخ"", ""b"": ""طاجن بامية"", ""lift"": 1.0971, ""conf"": 29.83, ""str"": ""Strong""}, {""a"": ""طاجن فراخ"", ""b"": ""طاجن ملوخية"", ""lift"": 1.0975, ""conf"": 29.87, ""str"": ""Strong""}, {""a"": ""طاجن فراخ"", ""b"": ""طحينة"", ""lift"": 1.0894, ""conf"": 44.17, ""str"": ""Strong""}, {""a"": ""طاجن فراخ"", ""b"": ""عصير قصب"", ""lift"": 1.092, ""conf"": 29.71, ""str"": ""Strong""}, {""a"": ""طاجن فراخ"", ""b"": ""عصير مانجو"", ""lift"": 1.0852, ""conf"": 50.07, ""str"": ""Strong""}, {""a"": ""طاجن فراخ"", ""b"": ""كباب"", ""lift"": 1.0884, ""conf"": 44.07, ""str"": ""Strong""}, {""a"": ""طاجن فراخ"", ""b"": ""كفتة"", ""lift"": 1.0961, ""conf"": 29.87, ""str"": ""Strong""}, {""a"": ""طاجن فراخ"", ""b"": ""محشي باذنجان"", ""lift"": 1.0994, ""conf"": 21.18, ""str"": ""Strong""}, {""a"": ""طاجن فراخ"", ""b"": ""محشي كوسة"", ""lift"": 1.0937, ""conf"": 37.47, ""str"": ""Strong""}, {""a"": ""طاجن فراخ"", ""b"": ""محشي ورق عنب"", ""lift"": 1.0935, ""conf"": 37.46, ""str"": ""Strong""}, {""a"": ""طاجن ملوخية"", ""b"": ""بابا غنوج"", ""lift"": 1.0995, ""conf"": 29.9, ""str"": ""Strong""}, {""a"": ""طاجن ملوخية"", ""b"": ""سلطة بلدي"", ""lift"": 1.1052, ""conf"": 21.2, ""str"": ""Very Strong""}, {""a"": ""طاجن ملوخية"", ""b"": ""شاي"", ""lift"": 1.103, ""conf"": 11.22, ""str"": ""Very Strong""}, {""a"": ""طاجن ملوخية"", ""b"": ""شيش طاووق"", ""lift"": 1.1044, ""conf"": 21.2, ""str"": ""Very Strong""}, {""a"": ""طاجن ملوخية"", ""b"": ""طاجن بامية"", ""lift"": 1.1001, ""conf"": 29.91, ""str"": ""Very Strong""}, {""a"": ""طاجن ملوخية"", ""b"": ""طاجن فراخ"", ""lift"": 1.0975, ""conf"": 37.59, ""str"": ""Strong""}, {""a"": ""طاجن ملوخية"", ""b"": ""طحينة"", ""lift"": 1.094, ""conf"": 44.35, ""str"": ""Strong""}, {""a"": ""طاجن ملوخية"", ""b"": ""عصير قصب"", ""lift"": 1.0982, ""conf"": 29.88, ""str"": ""Strong""}, {""a"": ""طاجن ملوخية"", ""b"": ""عصير مانجو"", ""lift"": 1.0901, ""conf"": 50.29, ""str"": ""Strong""}, {""a"": ""طاجن ملوخية"", ""b"": ""كباب"", ""lift"": 1.0929, ""conf"": 44.25, ""str"": ""Strong""}, {""a"": ""طاجن ملوخية"", ""b"": ""كفتة"", ""lift"": 1.1025, ""conf"": 30.05, ""str"": ""Very Strong""}, {""a"": ""طاجن ملوخية"", ""b"": ""محشي باذنجان"", ""lift"": 1.1024, ""conf"": 21.24, ""str"": ""Very Strong""}, {""a"": ""طاجن ملوخية"", ""b"": ""محشي كوسة"", ""lift"": 1.0966, ""conf"": 37.56, ""str"": ""Strong""}, {""a"": ""طاجن ملوخية"", ""b"": ""محشي ورق عنب"", ""lift"": 1.0957, ""conf"": 37.54, ""str"": ""Strong""}, {""a"": ""طحينة"", ""b"": ""بابا غنوج"", ""lift"": 1.0957, ""conf"": 29.8, ""str"": ""Strong""}, {""a"": ""طحينة"", ""b"": ""سلطة بلدي"", ""lift"": 1.0968, ""conf"": 21.04, ""str"": ""Strong""}, {""a"": ""طحينة"", ""b"": ""شاي"", ""lift"": 1.0996, ""conf"": 11.19, ""str"": ""Strong""}, {""a"": ""طحينة"", ""b"": ""شيش طاووق"", ""lift"": 1.0948, ""conf"": 21.02, ""str"": ""Strong""}, {""a"": ""طحينة"", ""b"": ""طاجن بامية"", ""lift"": 1.0951, ""conf"": 29.78, ""str"": ""Strong""}, {""a"": ""طحينة"", ""b"": ""طاجن فراخ"", ""lift"": 1.0894, ""conf"": 37.31, ""str"": ""Strong""}, {""a"": ""طحينة"", ""b"": ""طاجن ملوخية"", ""lift"": 1.094, ""conf"": 29.77, ""str"": ""Strong""}, {""a"": ""طحينة"", ""b"": ""عصير قصب"", ""lift"": 1.093, ""conf"": 29.74, ""str"": ""Strong""}, {""a"": ""طحينة"", ""b"": ""عصير مانجو"", ""lift"": 1.0838, ""conf"": 50.0, ""str"": ""Strong""}, {""a"": ""طحينة"", ""b"": ""كباب"", ""lift"": 1.0847, ""conf"": 43.92, ""str"": ""Strong""}, {""a"": ""طحينة"", ""b"": ""كفتة"", ""lift"": 1.0952, ""conf"": 29.85, ""str"": ""Strong""}, {""a"": ""طحينة"", ""b"": ""محشي باذنجان"", ""lift"": 1.0943, ""conf"": 21.08, ""str"": ""Strong""}, {""a"": ""طحينة"", ""b"": ""محشي كوسة"", ""lift"": 1.0891, ""conf"": 37.31, ""str"": ""Strong""}, {""a"": ""طحينة"", ""b"": ""محشي ورق عنب"", ""lift"": 1.0892, ""conf"": 37.31, ""str"": ""Strong""}, {""a"": ""عصير قصب"", ""b"": ""بابا غنوج"", ""lift"": 1.0973, ""conf"": 29.84, ""str"": ""Strong""}, {""a"": ""عصير قصب"", ""b"": ""سلطة بلدي"", ""lift"": 1.103, ""conf"": 21.16, ""str"": ""Very Strong""}, {""a"": ""عصير قصب"", ""b"": ""شاي"", ""lift"": 1.0976, ""conf"": 11.17, ""str"": ""Strong""}, {""a"": ""عصير قصب"", ""b"": ""شيش طاووق"", ""lift"": 1.1043, ""conf"": 21.2, ""str"": ""Very Strong""}, {""a"": ""عصير قصب"", ""b"": ""طاجن بامية"", ""lift"": 1.1027, ""conf"": 29.98, ""str"": ""Very Strong""}, {""a"": ""عصير قصب"", ""b"": ""طاجن فراخ"", ""lift"": 1.092, ""conf"": 37.4, ""str"": ""Strong""}, {""a"": ""عصير قصب"", ""b"": ""طاجن ملوخية"", ""lift"": 1.0982, ""conf"": 29.89, ""str"": ""Strong""}, {""a"": ""عصير قصب"", ""b"": ""طحينة"", ""lift"": 1.093, ""conf"": 44.31, ""str"": ""Strong""}, {""a"": ""عصير قصب"", ""b"": ""عصير مانجو"", ""lift"": 1.0903, ""conf"": 50.3, ""str"": ""Strong""}, {""a"": ""عصير قصب"", ""b"": ""كباب"", ""lift"": 1.0897, ""conf"": 44.12, ""str"": ""Strong""}, {""a"": ""عصير قصب"", ""b"": ""كفتة"", ""lift"": 1.1001, ""conf"": 29.98, ""str"": ""Very Strong""}, {""a"": ""عصير قصب"", ""b"": ""محشي باذنجان"", ""lift"": 1.1021, ""conf"": 21.23, ""str"": ""Very Strong""}, {""a"": ""عصير قصب"", ""b"": ""محشي كوسة"", ""lift"": 1.0938, ""conf"": 37.47, ""str"": ""Strong""}, {""a"": ""عصير قصب"", ""b"": ""محشي ورق عنب"", ""lift"": 1.0977, ""conf"": 37.6, ""str"": ""Strong""}, {""a"": ""عصير مانجو"", ""b"": ""بابا غنوج"", ""lift"": 1.0923, ""conf"": 29.7, ""str"": ""Strong""}, {""a"": ""عصير مانجو"", ""b"": ""سلطة بلدي"", ""lift"": 1.0945, ""conf"": 20.99, ""str"": ""Strong""}, {""a"": ""عصير مانجو"", ""b"": ""شاي"", ""lift"": 1.096, ""conf"": 11.15, ""str"": ""Strong""}, {""a"": ""عصير مانجو"", ""b"": ""شيش طاووق"", ""lift"": 1.09, ""conf"": 20.93, ""str"": ""Strong""}, {""a"": ""عصير مانجو"", ""b"": ""طاجن بامية"", ""lift"": 1.0907, ""conf"": 29.66, ""str"": ""Strong""}, {""a"": ""عصير مانجو"", ""b"": ""طاجن فراخ"", ""lift"": 1.0852, ""conf"": 37.17, ""str"": ""Strong""}, {""a"": ""عصير مانجو"", ""b"": ""طاجن ملوخية"", ""lift"": 1.0901, ""conf"": 29.67, ""str"": ""Strong""}, {""a"": ""عصير مانجو"", ""b"": ""طحينة"", ""lift"": 1.0838, ""conf"": 43.94, ""str"": ""Strong""}, {""a"": ""عصير مانجو"", ""b"": ""عصير قصب"", ""lift"": 1.0903, ""conf"": 29.66, ""str"": ""Strong""}, {""a"": ""عصير مانجو"", ""b"": ""كباب"", ""lift"": 1.0829, ""conf"": 43.85, ""str"": ""Strong""}, {""a"": ""عصير مانجو"", ""b"": ""كفتة"", ""lift"": 1.09, ""conf"": 29.71, ""str"": ""Strong""}, {""a"": ""عصير مانجو"", ""b"": ""محشي باذنجان"", ""lift"": 1.0934, ""conf"": 21.07, ""str"": ""Strong""}, {""a"": ""عصير مانجو"", ""b"": ""محشي كوسة"", ""lift"": 1.0853, ""conf"": 37.18, ""str"": ""Strong""}, {""a"": ""عصير مانجو"", ""b"": ""محشي ورق عنب"", ""lift"": 1.0859, ""conf"": 37.2, ""str"": ""Strong""}, {""a"": ""كباب"", ""b"": ""بابا غنوج"", ""lift"": 1.0924, ""conf"": 29.71, ""str"": ""Strong""}, {""a"": ""كباب"", ""b"": ""سلطة بلدي"", ""lift"": 1.0945, ""conf"": 20.99, ""str"": ""Strong""}, {""a"": ""كباب"", ""b"": ""شاي"", ""lift"": 1.101, ""conf"": 11.2, ""str"": ""Very Strong""}, {""a"": ""كباب"", ""b"": ""شيش طاووق"", ""lift"": 1.095, ""conf"": 21.02, ""str"": ""Strong""}, {""a"": ""كباب"", ""b"": ""طاجن بامية"", ""lift"": 1.0931, ""conf"": 29.72, ""str"": ""Strong""}, {""a"": ""كباب"", ""b"": ""طاجن فراخ"", ""lift"": 1.0884, ""conf"": 37.28, ""str"": ""Strong""}, {""a"": ""كباب"", ""b"": ""طاجن ملوخية"", ""lift"": 1.0929, ""conf"": 29.74, ""str"": ""Strong""}, {""a"": ""كباب"", ""b"": ""طحينة"", ""lift"": 1.0847, ""conf"": 43.97, ""str"": ""Strong""}, {""a"": ""كباب"", ""b"": ""عصير قصب"", ""lift"": 1.0897, ""conf"": 29.65, ""str"": ""Strong""}, {""a"": ""كباب"", ""b"": ""عصير مانجو"", ""lift"": 1.0829, ""conf"": 49.96, ""str"": ""Strong""}, {""a"": ""كباب"", ""b"": ""كفتة"", ""lift"": 1.0953, ""conf"": 29.85, ""str"": ""Strong""}, {""a"": ""كباب"", ""b"": ""محشي باذنجان"", ""lift"": 1.0968, ""conf"": 21.13, ""str"": ""Strong""}, {""a"": ""كباب"", ""b"": ""محشي كوسة"", ""lift"": 1.0893, ""conf"": 37.31, ""str"": ""Strong""}, {""a"": ""كباب"", ""b"": ""محشي ورق عنب"", ""lift"": 1.0897, ""conf"": 37.33, ""str"": ""Strong""}, {""a"": ""كفتة"", ""b"": ""بابا غنوج"", ""lift"": 1.0992, ""conf"": 29.89, ""str"": ""Strong""}, {""a"": ""كفتة"", ""b"": ""سلطة بلدي"", ""lift"": 1.1055, ""conf"": 21.21, ""str"": ""Very Strong""}, {""a"": ""كفتة"", ""b"": ""شاي"", ""lift"": 1.1046, ""conf"": 11.24, ""str"": ""Very Strong""}, {""a"": ""كفتة"", ""b"": ""شيش طاووق"", ""lift"": 1.1011, ""conf"": 21.14, ""str"": ""Very Strong""}, {""a"": ""كفتة"", ""b"": ""طاجن بامية"", ""lift"": 1.1016, ""conf"": 29.95, ""str"": ""Very Strong""}, {""a"": ""كفتة"", ""b"": ""طاجن فراخ"", ""lift"": 1.0961, ""conf"": 37.54, ""str"": ""Strong""}, {""a"": ""كفتة"", ""b"": ""طاجن ملوخية"", ""lift"": 1.1025, ""conf"": 30.0, ""str"": ""Very Strong""}, {""a"": ""كفتة"", ""b"": ""طحينة"", ""lift"": 1.0952, ""conf"": 44.4, ""str"": ""Strong""}, {""a"": ""كفتة"", ""b"": ""عصير قصب"", ""lift"": 1.1001, ""conf"": 29.93, ""str"": ""Very Strong""}, {""a"": ""كفتة"", ""b"": ""عصير مانجو"", ""lift"": 1.09, ""conf"": 50.29, ""str"": ""Strong""}, {""a"": ""كفتة"", ""b"": ""كباب"", ""lift"": 1.0953, ""conf"": 44.35, ""str"": ""Strong""}, {""a"": ""كفتة"", ""b"": ""محشي باذنجان"", ""lift"": 1.1033, ""conf"": 21.26, ""str"": ""Very Strong""}, {""a"": ""كفتة"", ""b"": ""محشي كوسة"", ""lift"": 1.0967, ""conf"": 37.57, ""str"": ""Strong""}, {""a"": ""كفتة"", ""b"": ""محشي ورق عنب"", ""lift"": 1.0984, ""conf"": 37.63, ""str"": ""Strong""}, {""a"": ""محشي باذنجان"", ""b"": ""بابا غنوج"", ""lift"": 1.1041, ""conf"": 30.03, ""str"": ""Very Strong""}, {""a"": ""محشي باذنجان"", ""b"": ""سلطة بلدي"", ""lift"": 1.1057, ""conf"": 21.21, ""str"": ""Very Strong""}, {""a"": ""محشي باذنجان"", ""b"": ""شاي"", ""lift"": 1.1062, ""conf"": 11.26, ""str"": ""Very Strong""}, {""a"": ""محشي باذنجان"", ""b"": ""شيش طاووق"", ""lift"": 1.1091, ""conf"": 21.3, ""str"": ""Very Strong""}, {""a"": ""محشي باذنجان"", ""b"": ""طاجن بامية"", ""lift"": 1.1041, ""conf"": 30.02, ""str"": ""Very Strong""}, {""a"": ""محشي باذنجان"", ""b"": ""طاجن فراخ"", ""lift"": 1.0994, ""conf"": 37.65, ""str"": ""Strong""}, {""a"": ""محشي باذنجان"", ""b"": ""طاجن ملوخية"", ""lift"": 1.1024, ""conf"": 30.0, ""str"": ""Very Strong""}, {""a"": ""محشي باذنجان"", ""b"": ""طحينة"", ""lift"": 1.0943, ""conf"": 44.37, ""str"": ""Strong""}, {""a"": ""محشي باذنجان"", ""b"": ""عصير قصب"", ""lift"": 1.1021, ""conf"": 29.98, ""str"": ""Very Strong""}, {""a"": ""محشي باذنجان"", ""b"": ""عصير مانجو"", ""lift"": 1.0934, ""conf"": 50.44, ""str"": ""Strong""}, {""a"": ""محشي باذنجان"", ""b"": ""كباب"", ""lift"": 1.0968, ""conf"": 44.41, ""str"": ""Strong""}, {""a"": ""محشي باذنجان"", ""b"": ""كفتة"", ""lift"": 1.1033, ""conf"": 30.07, ""str"": ""Very Strong""}, {""a"": ""محشي باذنجان"", ""b"": ""محشي كوسة"", ""lift"": 1.0962, ""conf"": 37.55, ""str"": ""Strong""}, {""a"": ""محشي باذنجان"", ""b"": ""محشي ورق عنب"", ""lift"": 1.1038, ""conf"": 37.81, ""str"": ""Very Strong""}, {""a"": ""محشي كوسة"", ""b"": ""بابا غنوج"", ""lift"": 1.0973, ""conf"": 29.84, ""str"": ""Strong""}, {""a"": ""محشي كوسة"", ""b"": ""سلطة بلدي"", ""lift"": 1.1008, ""conf"": 21.12, ""str"": ""Very Strong""}, {""a"": ""محشي كوسة"", ""b"": ""شاي"", ""lift"": 1.1025, ""conf"": 11.22, ""str"": ""Very Strong""}, {""a"": ""محشي كوسة"", ""b"": ""شيش طاووق"", ""lift"": 1.0986, ""conf"": 21.09, ""str"": ""Strong""}, {""a"": ""محشي كوسة"", ""b"": ""طاجن بامية"", ""lift"": 1.097, ""conf"": 29.83, ""str"": ""Strong""}, {""a"": ""محشي كوسة"", ""b"": ""طاجن فراخ"", ""lift"": 1.0937, ""conf"": 37.46, ""str"": ""Strong""}, {""a"": ""محشي كوسة"", ""b"": ""طاجن ملوخية"", ""lift"": 1.0966, ""conf"": 29.84, ""str"": ""Strong""}, {""a"": ""محشي كوسة"", ""b"": ""طحينة"", ""lift"": 1.0891, ""conf"": 44.16, ""str"": ""Strong""}, {""a"": ""محشي كوسة"", ""b"": ""عصير قصب"", ""lift"": 1.0938, ""conf"": 29.76, ""str"": ""Strong""}, {""a"": ""محشي كوسة"", ""b"": ""عصير مانجو"", ""lift"": 1.0853, ""conf"": 50.07, ""str"": ""Strong""}, {""a"": ""محشي كوسة"", ""b"": ""كباب"", ""lift"": 1.0893, ""conf"": 44.11, ""str"": ""Strong""}, {""a"": ""محشي كوسة"", ""b"": ""كفتة"", ""lift"": 1.0967, ""conf"": 29.89, ""str"": ""Strong""}, {""a"": ""محشي كوسة"", ""b"": ""محشي باذنجان"", ""lift"": 1.0962, ""conf"": 21.12, ""str"": ""Strong""}, {""a"": ""محشي كوسة"", ""b"": ""محشي ورق عنب"", ""lift"": 1.0956, ""conf"": 37.53, ""str"": ""Strong""}, {""a"": ""محشي ورق عنب"", ""b"": ""بابا غنوج"", ""lift"": 1.0967, ""conf"": 29.82, ""str"": ""Strong""}, {""a"": ""محشي ورق عنب"", ""b"": ""سلطة بلدي"", ""lift"": 1.0987, ""conf"": 21.07, ""str"": ""Strong""}, {""a"": ""محشي ورق عنب"", ""b"": ""شاي"", ""lift"": 1.0987, ""conf"": 11.18, ""str"": ""Strong""}, {""a"": ""محشي ورق عنب"", ""b"": ""شيش طاووق"", ""lift"": 1.0998, ""conf"": 21.12, ""str"": ""Strong""}, {""a"": ""محشي ورق عنب"", ""b"": ""طاجن بامية"", ""lift"": 1.0961, ""conf"": 29.8, ""str"": ""Strong""}, {""a"": ""محشي ورق عنب"", ""b"": ""طاجن فراخ"", ""lift"": 1.0935, ""conf"": 37.45, ""str"": ""Strong""}, {""a"": ""محشي ورق عنب"", ""b"": ""طاجن ملوخية"", ""lift"": 1.0957, ""conf"": 29.82, ""str"": ""Strong""}, {""a"": ""محشي ورق عنب"", ""b"": ""طحينة"", ""lift"": 1.0892, ""conf"": 44.16, ""str"": ""Strong""}, {""a"": ""محشي ورق عنب"", ""b"": ""عصير قصب"", ""lift"": 1.0977, ""conf"": 29.86, ""str"": ""Strong""}, {""a"": ""محشي ورق عنب"", ""b"": ""عصير مانجو"", ""lift"": 1.0859, ""conf"": 50.1, ""str"": ""Strong""}, {""a"": ""محشي ورق عنب"", ""b"": ""كباب"", ""lift"": 1.0897, ""conf"": 44.12, ""str"": ""Strong""}, {""a"": ""محشي ورق عنب"", ""b"": ""كفتة"", ""lift"": 1.0984, ""conf"": 29.94, ""str"": ""Strong""}, {""a"": ""محشي ورق عنب"", ""b"": ""محشي باذنجان"", ""lift"": 1.1038, ""conf"": 21.27, ""str"": ""Very Strong""}, {""a"": ""محشي ورق عنب"", ""b"": ""محشي كوسة"", ""lift"": 1.0956, ""conf"": 37.53, ""str"": ""Strong""}]}"
+			VAR SafeD = SUBSTITUTE ( SUBSTITUTE ( D, "\\", "\\\\" ), "'", "\'" )
+			
+			RETURN
+			"<!DOCTYPE html><html><head><meta charset='UTF-8'><style>*{margin:0;padding:0;box-sizing:border-box}html,body{width:100%;height:100%;overflow:hidden}body{font-family:'Segoe UI',system-ui,Arial,sans-serif;background:#f0f4f8;color:#1a2634}#app{display:flex;flex-direction:column;height:100vh;padding:10px 12px;gap:8px}#kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;flex-shrink:0}.kpi{background:#fff;padding:9px 12px;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.07);border-left:3px solid #ddd}.kpi-label{font-size:9px;color:#6b7e8f;text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:2px}.kpi-val{font-size:20px;font-weight:700;color:#1a2634;line-height:1.1}.kpi-sub{font-size:9px;color:#6b7e8f;margin-top:1px}.kpi-text{font-size:11px;font-weight:700;line-height:1.3}#toolbar{display:flex;gap:7px;align-items:center;background:#fff;padding:7px 11px;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.07);flex-wrap:wrap;flex-shrink:0}#toolbar label{font-size:11px;color:#6b7e8f;font-weight:600;white-space:nowrap}#toolbar select,#toolbar button{padding:4px 10px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:11px;background:#fff;cursor:pointer;color:#1a2634;font-weight:500;font-family:inherit}#toolbar select:hover,#toolbar button:hover{border-color:#2563EB;background:#f0f6ff}#toolbar button:disabled{color:#aaa;background:#f8fafc;cursor:default}#tb-divider{width:1px;height:18px;background:#e2e8f0;flex-shrink:0}#clear-btn{border-color:#E63946!important;background:#fff5f5!important;color:#E63946!important;font-weight:600!important;display:none}#legend{display:flex;gap:10px;font-size:10px;color:#6b7e8f;align-items:center;margin-left:auto;flex-wrap:wrap}.leg{display:flex;align-items:center;gap:4px}.leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}#main{flex:1;display:flex;gap:8px;min-height:0}#canvas-wrap{flex:1;background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.07);position:relative;overflow:hidden}canvas{position:absolute;inset:0;width:100%;height:100%}#hint{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:10px;color:#c8d3dd;pointer-events:none;white-space:nowrap}#focus-badge{position:absolute;top:10px;left:10px;background:#2563EB;color:#fff;font-size:10px;font-weight:700;padding:3px 9px;border-radius:12px;display:none;letter-spacing:.04em}#tip{position:absolute;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:11px 13px;font-size:11px;z-index:200;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.13);width:210px;display:none}.tip-name{font-weight:700;font-size:13px;margin-bottom:7px;padding-bottom:5px;border-bottom:2px solid #eee}.tip-row{display:flex;justify-content:space-between;margin-bottom:3px}.tip-key{color:#6b7e8f;font-size:10px}.tip-val{font-weight:500;font-size:10px;color:#1a2634}.tip-val-hl{font-weight:700;font-size:11px}.tip-section{margin-top:7px;padding-top:5px;border-top:1px solid #e2e8f0;font-size:9px;color:#6b7e8f;font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:3px}.tip-rec{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}.tip-rec-name{color:#1a2634;font-size:10px}.tip-rec-lift{font-weight:700;font-size:10px}#right-col{width:210px;flex-shrink:0;display:flex;flex-direction:column;gap:8px;min-height:0}#panel{width:100%;flex-shrink:0;display:none;flex-direction:column;gap:8px}#panel.visible{display:flex}#panel-header{border-radius:10px;padding:12px;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.15)}.ph-label{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.8;margin-bottom:3px}.ph-name{font-size:14px;font-weight:700;margin-bottom:8px;line-height:1.3}.ph-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}.ph-stat{background:rgba(255,255,255,.18);border-radius:6px;padding:4px 6px}.ph-stat-label{font-size:8px;opacity:.75;margin-bottom:1px;font-weight:600;letter-spacing:.04em}.ph-stat-val{font-size:12px;font-weight:700}#panel-recs{background:#fff;border-radius:10px;padding:10px;box-shadow:0 1px 4px rgba(0,0,0,.07);overflow-y:auto;display:flex;flex-direction:column}.recs-title{font-size:9px;font-weight:700;color:#6b7e8f;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}.rec-card{margin-bottom:6px;padding:7px 9px;border-radius:7px;background:#f0f4f8;border:1px solid transparent;position:relative}.rec-card.top{background:rgba(37,99,235,.05);border-color:rgba(37,99,235,.25)}.rec-best{position:absolute;top:4px;right:6px;font-size:8px;font-weight:700;color:#2563EB;letter-spacing:.04em;text-transform:uppercase}.rec-row1{display:flex;align-items:center;gap:5px;margin-bottom:3px}.rec-rank{font-size:9px;color:#6b7e8f;font-weight:600;width:13px}.rec-name{font-size:11px;font-weight:600;color:#1a2634;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rec-stats{display:flex;gap:6px;margin-bottom:4px}.rec-lift{font-size:10px;font-weight:700}.rec-conf{font-size:10px;color:#6b7e8f}.rec-bar-bg{height:3px;background:#e2e8f0;border-radius:2px;overflow:hidden}.rec-bar{height:100%;border-radius:2px}.rec-score{font-size:9px;color:#6b7e8f;margin-top:2px}#panel-guide{background:#fff;border-radius:10px;padding:8px 11px;box-shadow:0 1px 4px rgba(0,0,0,.07);display:flex;flex-direction:column;gap:0;overflow-y:auto;flex:1;min-height:0;justify-content:space-between}.guide-title{font-size:11px;font-weight:700;color:#6b7e8f;letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px;flex-shrink:0}.guide-item{display:flex;gap:7px;align-items:center;padding:3px 0;border-bottom:1px solid #f0f4f8}.guide-item:last-of-type{border-bottom:none}.guide-icon{font-size:14px;flex-shrink:0;width:20px;text-align:center}.guide-text{font-size:12px;color:#1a2634;font-weight:500;line-height:1.15}.guide-lift-box{padding:6px 9px;background:#f0f4f8;border-radius:7px;margin-top:4px;flex-shrink:0}.guide-lift-title{font-size:11px;color:#1a2634;font-weight:700;margin-bottom:3px;letter-spacing:.04em}.guide-lift-item{font-size:11px;color:#1a2634;line-height:1.8}</style></head><body><div id='app'><div id='kpi-row'><div class='kpi' style='border-left-color:#E63946'><div class='kpi-label'>Association Rules</div><div class='kpi-val' id='k-rows'>-</div><div class='kpi-sub'>Visible pairs</div></div><div class='kpi' style='border-left-color:#F4A261'><div class='kpi-label'>Avg Lift</div><div class='kpi-val' id='k-avg'>-</div><div class='kpi-sub'>Baseline = 1.0x</div></div><div class='kpi' style='border-left-color:#E63946'><div class='kpi-label'>Max Lift</div><div class='kpi-val' id='k-max'>-</div><div class='kpi-sub'>Strongest pair</div></div><div class='kpi' style='border-left-color:#2A9D8F'><div class='kpi-label'>Top Products</div><div class='kpi-val' id='k-nodes'>-</div><div class='kpi-sub'>In network</div></div><div class='kpi' style='border-left-color:#2563EB'><div class='kpi-label'>Top Pairing</div><div class='kpi-text' id='k-top' style='color:#2563EB'>-</div></div></div><div id='toolbar'><label>Top N:</label><select id='topn' onchange='applyFilters()'><option value='999'>All</option><option value='20'>Top 20</option><option value='10' selected>Top 10</option><option value='5'>Top 5</option></select><span id='tb-divider'></span><label>Min Lift:</label><select id='filt' onchange='applyFilters()'><option value='0'>Any</option><option value='1.09' selected>1.09+</option><option value='1.10'>1.10+</option><option value='1.105'>1.105+</option></select><span style='width:1px;height:18px;background:#e2e8f0;flex-shrink:0'></span><label>Size by:</label><select id='szm' onchange='applyFilters()'><option value='deg'>Connections</option><option value='lift'>Lift</option></select><span style='width:1px;height:18px;background:#e2e8f0;flex-shrink:0'></span><button id='relayout-btn' onclick='reLayout()'>Re-layout</button><button onclick='fitView()'>Fit View</button><button id='clear-btn' onclick='clearSel()'>&times; Clear</button><div id='legend'><span class='leg'><span class='leg-dot' style='background:#2A9D8F'></span>Very Strong 1.105+</span><span class='leg'><span class='leg-dot' style='background:#2563EB'></span>Strong 1.09-1.105</span><span class='leg'><span class='leg-dot' style='background:#E63946'></span>Moderate &lt;1.09</span></div></div><div id='main'><div id='canvas-wrap'><canvas id='cv'></canvas><div id='focus-badge'>FOCUS MODE</div><div id='tip'><div class='tip-name' id='tip-name'></div><div class='tip-row'><span class='tip-key'>Max Lift</span><span class='tip-val-hl' id='tip-lift'></span></div><div class='tip-row'><span class='tip-key'>Avg Lift</span><span class='tip-val' id='tip-avg'></span></div><div class='tip-row'><span class='tip-key'>Connections</span><span class='tip-val' id='tip-deg'></span></div><div class='tip-row'><span class='tip-key'>Strength</span><span class='tip-val' id='tip-str'></span></div><div class='tip-section'>Top Bundles</div><div id='tip-recs'></div></div><div id='hint'>Scroll=zoom · Drag=pan · Click=explore</div></div><div id='right-col'><div id='panel'><div id='panel-header'><div class='ph-label'>Selected Product</div><div class='ph-name' id='ph-name'></div><div class='ph-grid'><div class='ph-stat'><div class='ph-stat-label'>Max Lift</div><div class='ph-stat-val' id='ph-lift'></div></div><div class='ph-stat'><div class='ph-stat-label'>Bundles</div><div class='ph-stat-val' id='ph-deg'></div></div><div class='ph-stat'><div class='ph-stat-label'>Avg Lift</div><div class='ph-stat-val' id='ph-avg'></div></div><div class='ph-stat'><div class='ph-stat-label'>Class</div><div class='ph-stat-val' id='ph-class'></div></div></div></div><div id='panel-recs'><div class='recs-title'>Cross-Sell Recommendations</div><div id='rec-list'></div></div></div><div id='panel-guide'><div class='guide-title'>How to Use</div><div class='guide-item'><span class='guide-icon'>🎯</span><span class='guide-text'>Use Top N to focus on strongest pairs</span></div><div class='guide-item'><span class='guide-icon'>🖱</span><span class='guide-text'>Hover node for details</span></div><div class='guide-item'><span class='guide-icon'>👆</span><span class='guide-text'>Click node for recommendations</span></div><div class='guide-item'><span class='guide-icon'>🔍</span><span class='guide-text'>Scroll to zoom</span></div><div class='guide-item'><span class='guide-icon'>✋</span><span class='guide-text'>Drag to pan</span></div><div class='guide-lift-box'><div class='guide-lift-title'>VISUAL ENCODING</div><div class='guide-lift-item'><span style='color:#2A9D8F'>●</span> <strong>&gt;1.105</strong> Very Strong<br><span style='color:#2563EB'>●</span> <strong>1.09-1.105</strong> Strong<br><span style='color:#E63946'>●</span> <strong>&lt;1.09</strong> Moderate<br><span style='color:#6b7e8f;font-size:10px'>Size = Connections · Line = Confidence</span></div></div></div></div></div></div><script>try{var DATA=JSON.parse('" & SafeD & "');document.getElementById('k-avg').textContent=DATA.avg+'x';document.getElementById('k-max').textContent=DATA.max+'x';document.getElementById('k-top').textContent=DATA.top;var RAW=DATA.edges.map(function(e){return{a:e.a,b:e.b,lift:parseFloat(e.lift),conf:parseFloat(e.conf),str:e.str};});function liftColor(l){return l>=1.105?'#2A9D8F':l>=1.09?'#2563EB':'#E63946';}function liftClass(l){return l>=1.105?'Very Strong':l>=1.09?'Strong':'Moderate';}function computeRadius(degree,maxLift,mode){if(mode==='lift'){var norm=(maxLift-1.08)/(1.11-1.08);return Math.max(30,Math.min(80,30+norm*50));}var ds=Math.min(degree/14,1);var ls=Math.min((maxLift-1.08)/0.03,1);return Math.round(36+(ds*0.6+ls*0.4)*54);}var NODES={},EDGES=[],ARR=[],SEL=null,NEIGHBOR_SET=[];var CAM={x:0,y:0,z:1},DRAGGING=null,PANNING=false,OX=0,OY=0;var ANIM_ID=null,SIM_TICK=0,SIM_MAX=320,DID_DRAG=false;function getRecs(node){var seen={};for(var i=0;i<node.neighborEdges.length;i++){var e=node.neighborEdges[i];var pid=e.s===node?e.t.id:e.s.id;var sc=e.lift*(e.conf/100);if(!seen[pid]||sc>seen[pid].score)seen[pid]={product:pid,lift:e.lift,conf:e.conf,score:sc,str:e.str};}var results=[];var ks=Object.keys(seen);for(var k=0;k<ks.length;k++)results.push(seen[ks[k]]);results.sort(function(a,b){return b.score-a.score;});return results.slice(0,5);}function applyFilters(){var minL=parseFloat(document.getElementById('filt').value)||0;var topN=parseInt(document.getElementById('topn').value)||999;var mode=document.getElementById('szm').value;var filt=RAW.filter(function(r){return r.lift>=minL;});var pairMap={};for(var i=0;i<filt.length;i++){var r=filt[i];var k=[r.a,r.b].sort().join('|||');if(!pairMap[k]||r.lift*(r.conf/100)>pairMap[k].lift*(pairMap[k].conf/100))pairMap[k]=r;}var deduped=[];var pks=Object.keys(pairMap);for(var p=0;p<pks.length;p++)deduped.push(pairMap[pks[p]]);deduped.sort(function(a,b){return b.lift-a.lift;});var nodeScore={};for(var i=0;i<deduped.length;i++){var r=deduped[i];nodeScore[r.a]=(nodeScore[r.a]||0)+r.lift;nodeScore[r.b]=(nodeScore[r.b]||0)+r.lift;}var topNodes=Object.keys(nodeScore).sort(function(a,b){return nodeScore[b]-nodeScore[a];}).slice(0,topN);var topSet={};for(var i=0;i<topNodes.length;i++)topSet[topNodes[i]]=1;var finalEdges=deduped.filter(function(r){return topSet[r.a]&&topSet[r.b];});document.getElementById('focus-badge').style.display=topN<999?'block':'none';buildGraph(finalEdges,mode);}function buildGraph(filteredEdges,mode){NODES={};EDGES=[];ARR=[];SEL=null;NEIGHBOR_SET=[];if(!filteredEdges.length)return;var raw={};for(var i=0;i<filteredEdges.length;i++){var r=filteredEdges[i];var keys=[r.a,r.b];for(var k=0;k<keys.length;k++){var id=keys[k];if(!raw[id])raw[id]={sum:0,max:0,cnt:0};raw[id].sum+=r.lift;if(r.lift>raw[id].max)raw[id].max=r.lift;raw[id].cnt++;}}var ids=Object.keys(raw);var n=ids.length;var maxConf=0;for(var i=0;i<filteredEdges.length;i++)if(filteredEdges[i].conf>maxConf)maxConf=filteredEdges[i].conf;for(var i=0;i<ids.length;i++){var id=ids[i];var angle=(i/n)*Math.PI*2;var r0=280+Math.random()*360;var maxL=raw[id].max;var deg=raw[id].cnt;var radius=computeRadius(deg,maxL,mode||'deg');NODES[id]={id:id,x:Math.cos(angle)*r0+(Math.random()-0.5)*50,y:Math.sin(angle)*r0+(Math.random()-0.5)*50,vx:0,vy:0,maxLift:maxL,avgLift:raw[id].sum/deg,degree:deg,radius:radius,color:liftColor(maxL),neighborEdges:[]};}for(var i=0;i<filteredEdges.length;i++){var r=filteredEdges[i];var lw=Math.max(1,Math.min(8,(r.conf/maxConf)*8));var e={lift:r.lift,conf:r.conf,str:r.str,s:NODES[r.a],t:NODES[r.b],score:r.lift*(r.conf/100),lineW:lw};EDGES.push(e);NODES[r.a].neighborEdges.push(e);NODES[r.b].neighborEdges.push(e);}ARR=Object.keys(NODES).map(function(k){return NODES[k];});document.getElementById('k-rows').textContent=filteredEdges.length;document.getElementById('k-nodes').textContent=ARR.length;updPanel();fitView();startSim();}function simStep(alpha){for(var i=0;i<ARR.length;i++){ARR[i].vx*=0.84;ARR[i].vy*=0.84;}for(var i=0;i<ARR.length;i++){for(var j=i+1;j<ARR.length;j++){var a=ARR[i],b=ARR[j];var dx=b.x-a.x,dy=b.y-a.y;var d2=dx*dx+dy*dy;if(d2===0){a.x+=(Math.random()-0.5)*2;continue;}var d=Math.sqrt(d2);var minD=a.radius+b.radius+70;var str=d<minD?8000/(d2+1):2500/(d2+1);var fx=(dx/d)*str,fy=(dy/d)*str;a.vx-=fx;a.vy-=fy;b.vx+=fx;b.vy+=fy;}}for(var i=0;i<EDGES.length;i++){var e=EDGES[i];var dx=e.t.x-e.s.x,dy=e.t.y-e.s.y;var d=Math.sqrt(dx*dx+dy*dy)||1;var liftNorm=(e.lift-1.08)/0.03;var rest=e.s.radius+e.t.radius+150+(1-liftNorm)*550;var f=((d-rest)/d)*0.055;e.s.vx+=dx*f;e.s.vy+=dy*f;e.t.vx-=dx*f;e.t.vy-=dy*f;}for(var i=0;i<ARR.length;i++){var n=ARR[i];n.vx-=n.x*0.012*alpha;n.vy-=n.y*0.012*alpha;n.x+=n.vx*alpha;n.y+=n.vy*alpha;}}var cv=document.getElementById('cv');var ctx=cv.getContext('2d');function isNb(node,n){for(var i=0;i<NEIGHBOR_SET.length;i++){if(NEIGHBOR_SET[i]===n)return true;}return false;}function draw(){ctx.clearRect(0,0,cv.width,cv.height);ctx.save();ctx.translate(CAM.x,CAM.y);ctx.scale(CAM.z,CAM.z);var W=cv.width/CAM.z,H=cv.height/CAM.z;var ox=-CAM.x/CAM.z,oy=-CAM.y/CAM.z;for(var i=0;i<EDGES.length;i++){var e=EDGES[i];var inV=Math.min(e.s.x,e.t.x)<ox+W+100&&Math.max(e.s.x,e.t.x)>ox-100&&Math.min(e.s.y,e.t.y)<oy+H+100&&Math.max(e.s.y,e.t.y)>oy-100;if(!inV)continue;var nb=SEL&&(e.s===SEL||e.t===SEL);var dm=SEL&&!nb;ctx.globalAlpha=dm?0.04:nb?0.92:SEL?0.18:0.35;ctx.strokeStyle=nb?liftColor(e.lift):'#c8d3dd';ctx.lineWidth=nb?e.lineW*1.4:e.lineW*0.7;ctx.beginPath();ctx.moveTo(e.s.x,e.s.y);ctx.lineTo(e.t.x,e.t.y);ctx.stroke();if(nb){var mx2=(e.s.x+e.t.x)/2,my2=(e.s.y+e.t.y)/2;ctx.globalAlpha=0.92;ctx.fillStyle=liftColor(e.lift);var bx=mx2-20,by=my2-9,br=4;ctx.beginPath();ctx.moveTo(bx+br,by);ctx.lineTo(bx+40-br,by);ctx.quadraticCurveTo(bx+40,by,bx+40,by+br);ctx.lineTo(bx+40,by+18-br);ctx.quadraticCurveTo(bx+40,by+18,bx+40-br,by+18);ctx.lineTo(bx+br,by+18);ctx.quadraticCurveTo(bx,by+18,bx,by+18-br);ctx.lineTo(bx,by+br);ctx.quadraticCurveTo(bx,by,bx+br,by);ctx.closePath();ctx.fill();ctx.fillStyle='#fff';ctx.font='bold 9px Segoe UI,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(e.lift.toFixed(4)+'x',mx2,my2);}}ctx.shadowBlur=0;for(var i=0;i<ARR.length;i++){var n=ARR[i];if(n.x+n.radius<ox-20||n.x-n.radius>ox+W+20||n.y+n.radius<oy-20||n.y-n.radius>oy+H+20)continue;var isSel=n===SEL;var isNbN=SEL?isNb(SEL,n):false;var isDim=SEL&&!isSel&&!isNbN;ctx.globalAlpha=isDim?0.1:1;ctx.shadowBlur=isSel?18:isNbN?8:0;ctx.shadowColor=isSel?n.color:n.color+'88';ctx.beginPath();ctx.arc(n.x,n.y,n.radius,0,Math.PI*2);ctx.fillStyle=n.color;ctx.fill();if(isSel){ctx.shadowBlur=0;ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.stroke();ctx.strokeStyle=n.color;ctx.lineWidth=2;ctx.beginPath();ctx.arc(n.x,n.y,n.radius+5,0,Math.PI*2);ctx.stroke();}else{ctx.strokeStyle='rgba(255,255,255,.85)';ctx.lineWidth=1.8;ctx.stroke();}ctx.shadowBlur=0;if(!isDim){var words=n.id.split(/[\s\/]+/);var line1=words[0]||'';var line2=words.slice(1).join(' ')||'';var fs=Math.max(12,Math.min(17,Math.floor(n.radius*0.38)));ctx.fillStyle='#fff';ctx.font='bold '+fs+'px Segoe UI,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.globalAlpha=1;ctx.shadowColor='rgba(0,0,0,0.5)';ctx.shadowBlur=4;if(line2){ctx.fillText(line1,n.x,n.y-fs*0.7);ctx.fillText(line2,n.x,n.y+fs*0.4);}else{ctx.fillText(line1,n.x,n.y-2);}ctx.shadowBlur=0;ctx.font='bold '+Math.max(9,Math.min(12,Math.floor(n.radius*0.28)))+'px Segoe UI,sans-serif';ctx.fillStyle='rgba(255,255,255,0.75)';ctx.fillText(String(n.degree),n.x,n.y+n.radius*0.65);}}ctx.globalAlpha=1;ctx.restore();}function startSim(){if(ANIM_ID)cancelAnimationFrame(ANIM_ID);SIM_TICK=0;var btn=document.getElementById('relayout-btn');if(btn){btn.disabled=true;btn.textContent='Running...';}function step(){SIM_TICK++;var alpha=Math.max(0.015,1-SIM_TICK/SIM_MAX);simStep(alpha);draw();if(SIM_TICK<SIM_MAX){ANIM_ID=requestAnimationFrame(step);}else{ANIM_ID=null;if(btn){btn.disabled=false;btn.textContent='Re-layout';}}}step();}function worldPos(ex,ey){return{x:(ex-CAM.x)/CAM.z,y:(ey-CAM.y)/CAM.z};}function fitView(){if(!ARR.length){CAM={x:cv.width/2,y:cv.height/2,z:1};draw();return;}var minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;for(var i=0;i<ARR.length;i++){var n=ARR[i];minX=Math.min(minX,n.x-n.radius-20);maxX=Math.max(maxX,n.x+n.radius+20);minY=Math.min(minY,n.y-n.radius-20);maxY=Math.max(maxY,n.y+n.radius+20);}var W=cv.width,H=cv.height;var scaleX=W/(maxX-minX),scaleY=H/(maxY-minY);var z=Math.min(scaleX,scaleY,1.2)*0.88;CAM={x:W/2-((minX+maxX)/2)*z,y:H/2-((minY+maxY)/2)*z,z:z};draw();}function resize(){var p=cv.parentElement;cv.width=p?p.clientWidth:900;cv.height=p?p.clientHeight:540;fitView();}function hitTest(ex,ey){var w=worldPos(ex,ey);for(var i=ARR.length-1;i>=0;i--){var n=ARR[i];if(Math.sqrt((n.x-w.x)*(n.x-w.x)+(n.y-w.y)*(n.y-w.y))<n.radius+5)return n;}return null;}function updPanel(){var panel=document.getElementById('panel');var guide=document.getElementById('panel-guide');var clearBtn=document.getElementById('clear-btn');if(SEL){panel.classList.add('visible');guide.style.display='none';clearBtn.style.display='';var shortName=SEL.id.length>13?SEL.id.slice(0,12)+'...':SEL.id;clearBtn.textContent='\u00d7 '+shortName;document.getElementById('panel-header').style.background=SEL.color;document.getElementById('ph-name').textContent=SEL.id;document.getElementById('ph-lift').textContent=SEL.maxLift.toFixed(4)+'x';document.getElementById('ph-deg').textContent=String(SEL.degree);document.getElementById('ph-avg').textContent=SEL.avgLift.toFixed(4)+'x';document.getElementById('ph-class').textContent=liftClass(SEL.maxLift);var recs=getRecs(SEL);var list=document.getElementById('rec-list');list.innerHTML='';for(var i=0;i<recs.length;i++){var r=recs[i];var bar=Math.min(100,(r.score/1.5)*100);var c=liftColor(r.lift);var nm=r.product.length>16?r.product.slice(0,14)+'...':r.product;var isTop=i===0;var div=document.createElement('div');div.className='rec-card'+(isTop?' top':'');div.innerHTML=(isTop?'<div class='+chr(39)+'rec-best'+chr(39)+'>BEST</div>':'')+'<div class='+chr(39)+'rec-row1'+chr(39)+'><span class='+chr(39)+'rec-rank'+chr(39)+'>#'+(i+1)+'</span><span class='+chr(39)+'rec-name'+chr(39)+' title='+chr(39)+r.product+chr(39)+'>'+nm+'</span></div><div class='+chr(39)+'rec-stats'+chr(39)+'><span class='+chr(39)+'rec-lift'+chr(39)+' style='+chr(39)+'color:'+c+chr(39)+'>'+r.lift.toFixed(4)+'x</span><span class='+chr(39)+'rec-conf'+chr(39)+'>'+r.conf.toFixed(1)+'% conf</span></div><div class='+chr(39)+'rec-bar-bg'+chr(39)+'><div class='+chr(39)+'rec-bar'+chr(39)+' style='+chr(39)+'width:'+bar+'%;background:'+c+chr(39)+'></div></div><div class='+chr(39)+'rec-score'+chr(39)+'>Score: '+r.score.toFixed(4)+'</div>';list.appendChild(div);}}else{panel.classList.remove('visible');guide.style.display='';clearBtn.style.display='none';}}function clearSel(){SEL=null;NEIGHBOR_SET=[];updPanel();draw();}function chr(n){return String.fromCharCode(n);}var tip=document.getElementById('tip');var lastTipNode=null;function showTip(node,ex,ey){if(node===lastTipNode){posTip(ex,ey);return;}lastTipNode=node;var nameEl=document.getElementById('tip-name');nameEl.textContent=node.id;nameEl.style.color=node.color;nameEl.style.borderBottomColor=node.color+'33';var liftEl=document.getElementById('tip-lift');liftEl.textContent=node.maxLift.toFixed(4)+'x';liftEl.style.color=node.color;document.getElementById('tip-avg').textContent=node.avgLift.toFixed(4)+'x';document.getElementById('tip-deg').textContent=node.degree+' products';document.getElementById('tip-str').textContent=liftClass(node.maxLift);var recs=getRecs(node).slice(0,3);var recsEl=document.getElementById('tip-recs');recsEl.innerHTML='';for(var i=0;i<recs.length;i++){var r=recs[i];var nm=r.product.length>14?r.product.slice(0,12)+'...':r.product;recsEl.innerHTML+='<div class='+chr(39)+'tip-rec'+chr(39)+'><span class='+chr(39)+'tip-rec-name'+chr(39)+'><span style='+chr(39)+'color:#6b7e8f'+chr(39)+'>'+(i+1)+'.</span> '+nm+'</span><span class='+chr(39)+'tip-rec-lift'+chr(39)+' style='+chr(39)+'color:'+liftColor(r.lift)+chr(39)+'>'+r.lift.toFixed(4)+'x</span></div>';}tip.style.display='block';posTip(ex,ey);}function hideTip(){tip.style.display='none';lastTipNode=null;}function posTip(ex,ey){var cw=cv.parentElement.clientWidth,ch=cv.parentElement.clientHeight;var tx=ex+14,ty=ey-10;if(tx+220>cw)tx=ex-225;if(ty+240>ch)ty=ch-245;if(ty<4)ty=4;tip.style.left=tx+'px';tip.style.top=ty+'px';}function reLayout(){applyFilters();}cv.addEventListener('mousedown',function(e){DID_DRAG=false;var n=hitTest(e.offsetX,e.offsetY);if(n){DRAGGING=n;}else{PANNING=true;}OX=e.offsetX;OY=e.offsetY;});cv.addEventListener('mousemove',function(e){var dx=e.offsetX-OX,dy=e.offsetY-OY;if(Math.sqrt(dx*dx+dy*dy)>3)DID_DRAG=true;if(DRAGGING){var w=worldPos(e.offsetX,e.offsetY);DRAGGING.x=w.x;DRAGGING.y=w.y;DRAGGING.vx=0;DRAGGING.vy=0;draw();return;}if(PANNING){CAM.x+=dx;CAM.y+=dy;OX=e.offsetX;OY=e.offsetY;draw();return;}var n=hitTest(e.offsetX,e.offsetY);if(n){showTip(n,e.offsetX,e.offsetY);cv.style.cursor='pointer';}else{hideTip();cv.style.cursor='default';}}); cv.addEventListener('mouseup',function(){DRAGGING=null;PANNING=false;});cv.addEventListener('mouseleave',function(){hideTip();DRAGGING=null;PANNING=false;});cv.addEventListener('click',function(e){if(DID_DRAG)return;var n=hitTest(e.offsetX,e.offsetY);if(n&&n!==SEL){SEL=n;NEIGHBOR_SET=[];for(var i=0;i<n.neighborEdges.length;i++){var ed=n.neighborEdges[i];NEIGHBOR_SET.push(ed.s===n?ed.t:ed.s);}}else{SEL=null;NEIGHBOR_SET=[];}updPanel();draw();});cv.addEventListener('wheel',function(e){e.preventDefault();var zf=e.deltaY>0?0.9:1.11;CAM.x=e.offsetX-(e.offsetX-CAM.x)*zf;CAM.y=e.offsetY-(e.offsetY-CAM.y)*zf;CAM.z=Math.max(0.1,Math.min(8,CAM.z*zf));draw();},{passive:false});window.addEventListener('resize',function(){resize();draw();});applyFilters();requestAnimationFrame(function(){resize();});}catch(err){document.body.innerHTML='<div style=padding:20px;color:#E63946;font-family:sans-serif><strong>Error:</strong> '+err.message+'</div>';console.error(err);}
+			</script></body></html>"
+		lineageTag: 06e93b83-8d77-4b5f-b28e-8fe5cf2c786a
+
+	measure Sales = ```
+			
+			VAR TopRank =
+			    RANKX (
+			        ALL ( 'final_table_clean'[item_name] ),
+			        [Total Sales],
+			        ,
+			        DESC,
+			        DENSE
+			    )
+			
+			VAR BottomRank =
+			    RANKX (
+			        ALL ( 'final_table_clean'[item_name] ),
+			        [Total Sales],
+			        ,
+			        ASC,
+			        DENSE
+			    )
+			
+			VAR SelectedType =
+			    SELECTEDVALUE ( topbotton[Value] )
+			
+			VAR FinalRank =
+			    IF ( SelectedType = "top", TopRank, BottomRank )
+			
+			RETURN
+			    IF (
+			        FinalRank <= SELECTEDVALUE ( ranking[ranking] ),
+			        [Total Sales],
+			        BLANK ()
+			    )
+			
+			```
+		lineageTag: 48b653c2-3637-4514-9491-f871e56d2d29
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure Items = ```
+			
+			VAR TopRank =
+			    RANKX (
+			        ALL ( 'final_table_clean'[item_name] ),
+			        [Total Items],
+			        ,
+			        DESC,
+			        DENSE
+			    )
+			
+			VAR BottomRank =
+			    RANKX (
+			        ALL ( 'final_table_clean'[item_name] ),
+			        [Total Items],
+			        ,
+			        ASC,
+			        DENSE
+			    )
+			
+			VAR SelectedType =
+			    SELECTEDVALUE ( topbotton[Value] )
+			
+			VAR FinalRank =
+			    IF ( SelectedType = "top", TopRank, BottomRank )
+			
+			RETURN
+			    IF (
+			        FinalRank <= SELECTEDVALUE ( ranking[ranking] ),
+			        [Total Items],
+			        BLANK ()
+			    )
+			
+			```
+		formatString: 0
+		lineageTag: 9565bc61-d98a-42f2-9315-837a457a68fa
+
+	measure ReviewsDashboard =
+			
+			
+			/* ══ SECTION 0 — GUARD ══════════════════════════════════ */
+			VAR _HasData = COUNTROWS(final_table_clean) > 0
+			
+			/* ══ SECTION 1 — GLOBAL METRICS ════════════════════════ */
+			VAR _TR  = COUNTROWS(final_table_clean)
+			VAR _Rev = SUM(final_table_clean[total_amount])
+			VAR _Qty = SUM(final_table_clean[quantity])
+			VAR _AvgR =
+			    IF(_TR = 0, 0, DIVIDE(SUM(final_table_clean[rating]), _TR, 0))
+			VAR _WtdR =
+			    DIVIDE(
+			        SUMX(final_table_clean, final_table_clean[rating] * final_table_clean[quantity]),
+			        _Qty, 0)
+			VAR _C5 = CALCULATE(COUNTROWS(final_table_clean), final_table_clean[rating] = 5)
+			VAR _C4 = CALCULATE(COUNTROWS(final_table_clean), final_table_clean[rating] = 4)
+			VAR _C3 = CALCULATE(COUNTROWS(final_table_clean), final_table_clean[rating] = 3)
+			VAR _C2 = CALCULATE(COUNTROWS(final_table_clean), final_table_clean[rating] = 2)
+			VAR _C1 = CALCULATE(COUNTROWS(final_table_clean), final_table_clean[rating] = 1)
+			VAR _PosN = _C5 + _C4
+			VAR _NeuN = _C3
+			VAR _NegN = _C2 + _C1
+			VAR _PosP = DIVIDE(_PosN, _TR, 0)
+			VAR _NeuP = DIVIDE(_NeuN, _TR, 0)
+			VAR _NegP = DIVIDE(_NegN, _TR, 0)
+			VAR _CSI  = ROUND((_PosP - _NegP + 1) / 2 * 100, 1)
+			
+			/* ══ SECTION 2 — CHANNEL ANALYTICS ═════════════════════ */
+			VAR _DineR = CALCULATE(SUM(final_table_clean[rating]),   KEEPFILTERS(final_table_clean[order_type] = "Dine-in"))
+			VAR _DineN = CALCULATE(COUNTROWS(final_table_clean),     KEEPFILTERS(final_table_clean[order_type] = "Dine-in"))
+			VAR _TakeR = CALCULATE(SUM(final_table_clean[rating]),   KEEPFILTERS(final_table_clean[order_type] = "Takeaway"))
+			VAR _TakeN = CALCULATE(COUNTROWS(final_table_clean),     KEEPFILTERS(final_table_clean[order_type] = "Takeaway"))
+			VAR _DelR  = CALCULATE(SUM(final_table_clean[rating]),   KEEPFILTERS(final_table_clean[order_type] = "Delivery"))
+			VAR _DelN  = CALCULATE(COUNTROWS(final_table_clean),     KEEPFILTERS(final_table_clean[order_type] = "Delivery"))
+			VAR _DineA = DIVIDE(_DineR, _DineN, 0)
+			VAR _TakeA = DIVIDE(_TakeR, _TakeN, 0)
+			VAR _DelA  = DIVIDE(_DelR,  _DelN,  0)
+			VAR _Gap   = ROUND(_DineA - _DelA, 2)
+			VAR _GapA  = ABS(_Gap)
+			
+			/* ══ SECTION 3 — ACTIVE FILTER LABELS ══════════════════ */
+			VAR _TotalCats     = CALCULATE(COUNTROWS(VALUES(final_table_clean[category])),       ALL(final_table_clean[category]))
+			VAR _TotalBranches = CALCULATE(COUNTROWS(VALUES(final_table_clean[branch])),         ALL(final_table_clean[branch]))
+			VAR _TotalPayments = CALCULATE(COUNTROWS(VALUES(final_table_clean[payment_method])), ALL(final_table_clean[payment_method]))
+			VAR _SelCats       = COUNTROWS(VALUES(final_table_clean[category]))
+			VAR _SelBranches   = COUNTROWS(VALUES(final_table_clean[branch]))
+			VAR _SelPayments   = COUNTROWS(VALUES(final_table_clean[payment_method]))
+			VAR _LblCat  = IF(_SelCats     = _TotalCats,     "All",
+			                  CONCATENATEX(VALUES(final_table_clean[category]),     final_table_clean[category],     ", "))
+			VAR _LblBrch = IF(_SelBranches = _TotalBranches, "All",
+			                  CONCATENATEX(VALUES(final_table_clean[branch]),       final_table_clean[branch],       ", "))
+			VAR _LblPay  = IF(_SelPayments = _TotalPayments, "All",
+			                  CONCATENATEX(VALUES(final_table_clean[payment_method]),final_table_clean[payment_method],", "))
+			VAR _ChipCat  = IF(_SelCats     < _TotalCats,     "on", "off")
+			VAR _ChipBrch = IF(_SelBranches < _TotalBranches, "on", "off")
+			VAR _ChipPay  = IF(_SelPayments < _TotalPayments, "on", "off")
+			
+			/* ══ SECTION 4 — ITEM TABLE ═════════════════════════════ */
+			VAR _IBase =
+			    ADDCOLUMNS(
+			        SUMMARIZE(final_table_clean, final_table_clean[item_name]),
+			        "@N",    CALCULATE(COUNTROWS(final_table_clean)),
+			        "@SumR", CALCULATE(SUM(final_table_clean[rating])),
+			        "@SumQ", CALCULATE(SUM(final_table_clean[quantity])),
+			        "@SumW", CALCULATE(SUMX(final_table_clean, final_table_clean[rating] * final_table_clean[quantity])),
+			        "@Rev",  CALCULATE(SUM(final_table_clean[total_amount]))
+			    )
+			VAR _IFull =
+			    ADDCOLUMNS(_IBase,
+			        "@WR",  DIVIDE([@SumW], [@SumQ], 0),
+			        "@Qty", [@SumQ]
+			    )
+			VAR _IF      = FILTER(_IFull, [@N] > 0 && [@Rev] > 0)
+			VAR _IC      = COUNTROWS(_IF)
+			VAR _MaxRev  = MAXX(_IF, [@Rev])
+			VAR _AvgQtyI = AVERAGEX(_IF, [@Qty])
+			VAR _T3Rev   = TOPN(3, _IF, [@Rev], DESC)
+			VAR _T5Rev   = TOPN(5, _IF, [@Rev], DESC)
+			VAR _RiskT   = TOPN(1, _T3Rev, [@WR], ASC)
+			VAR _StarT   = TOPN(1, _T5Rev, [@WR], DESC)
+			VAR _RiskNm  = IFERROR(MAXX(_RiskT, [item_name]), "N/A")
+			VAR _StarNm  = IFERROR(MAXX(_StarT, [item_name]), "N/A")
+			VAR _OppT    =
+			    TOPN(1,
+			         FILTER(_IF,
+			                [@WR]  >= 2.5 && [@WR] < 4.2 &&
+			                [@Qty] >= _AvgQtyI &&
+			                [item_name] <> _RiskNm &&
+			                [item_name] <> _StarNm),
+			         [@Qty], DESC)
+			VAR _RiskR   = IFERROR(MAXX(_RiskT, [@WR]),  0)
+			VAR _StarR   = IFERROR(MAXX(_StarT, [@WR]),  0)
+			VAR _OppNm   = IFERROR(MAXX(_OppT,  [item_name]), "N/A")
+			VAR _OppR    = IFERROR(MAXX(_OppT,  [@WR]),  0)
+			VAR _OppQ    = IFERROR(MAXX(_OppT,  [@Qty]), 0)
+			VAR _RiskRv  = IFERROR(MAXX(_RiskT, [@Rev]), 0)
+			VAR _StarRv  = IFERROR(MAXX(_StarT, [@Rev]), 0)
+			
+			/* ══ SECTION 5 — TREND ══════════════════════════════════ */
+			VAR _TRaw =
+			    ADDCOLUMNS(
+			        SUMMARIZE('calendar', 'calendar'[Year], 'calendar'[month number], 'calendar'[MonthYear]),
+			        "@S", 'calendar'[Year] * 100 + 'calendar'[month number],
+			        "@R",
+			            CALCULATE(
+			                DIVIDE(SUM(final_table_clean[rating]), COUNTROWS(final_table_clean), BLANK()),
+			                TREATAS(SUMMARIZE('calendar', 'calendar'[Date]), final_table_clean[order_date])
+			            )
+			    )
+			VAR _TF      = FILTER(_TRaw, NOT ISBLANK([@R]) && [@R] > 0)
+			VAR _TD      = TOPN(6, _TF, [@S], DESC)
+			VAR _TMax    = MAXX(_TD, [@R])
+			VAR _TMin    = MINX(_TD, [@R])
+			VAR _TRng    = IF(_TMax = _TMin, 0.1, _TMax - _TMin)
+			VAR _LS      = MAXX(_TD, [@S])
+			VAR _PS      = MAXX(FILTER(_TD, [@S] < _LS), [@S])
+			VAR _LR      = MAXX(FILTER(_TD, [@S] = _LS), [@R])
+			VAR _PR      = MAXX(FILTER(_TD, [@S] = _PS), [@R])
+			VAR _TDelta  = IF(ISBLANK(_PR), 0, ROUND(_LR - _PR, 2))
+			VAR _TArr    = IF(_TDelta >  0.01, "▲", IF(_TDelta < -0.01, "▼", "►"))
+			VAR _TArrC   = IF(_TDelta >  0.01, "#10B981", IF(_TDelta < -0.01, "#EF4444", "#94A3B8"))
+			VAR _TDeltaFmt = FORMAT(ABS(_TDelta), "0.00")
+			
+			/* ══ SECTION 6 — FORMAT STRINGS ════════════════════════ */
+			VAR _fAvg   = FORMAT(_AvgR,  "0.00")
+			VAR _fWtd   = FORMAT(_WtdR,  "0.00")
+			VAR _fTR    = FORMAT(_TR,    "#,##0")
+			VAR _fCSI   = FORMAT(_CSI,   "0.0")
+			VAR _fPos   = FORMAT(ROUND(_PosP * 100, 1), "0.0")
+			VAR _fNeg   = FORMAT(ROUND(_NegP * 100, 1), "0.0")
+			VAR _fNeu   = FORMAT(ROUND(_NeuP * 100, 1), "0.0")
+			VAR _fGap   = FORMAT(_GapA,  "0.00")
+			VAR _fDine  = FORMAT(_DineA, "0.00")
+			VAR _fTake  = FORMAT(_TakeA, "0.00")
+			VAR _fDel   = FORMAT(_DelA,  "0.00")
+			VAR _fDineW = FORMAT(ROUND(DIVIDE(_DineA, 5) * 100, 0), "0")
+			VAR _fTakeW = FORMAT(ROUND(DIVIDE(_TakeA, 5) * 100, 0), "0")
+			VAR _fDelW  = FORMAT(ROUND(DIVIDE(_DelA,  5) * 100, 0), "0")
+			VAR _fPosB  = FORMAT(ROUND(_PosP * 100, 0), "0")
+			VAR _fNeuB  = FORMAT(ROUND(_NeuP * 100, 0), "0")
+			VAR _fNegB  = FORMAT(ROUND(_NegP * 100, 0), "0")
+			VAR _fW5    = FORMAT(ROUND(DIVIDE(_C5, _TR, 0) * 100, 0), "0")
+			VAR _fW4    = FORMAT(ROUND(DIVIDE(_C4, _TR, 0) * 100, 0), "0")
+			VAR _fW3    = FORMAT(ROUND(DIVIDE(_C3, _TR, 0) * 100, 0), "0")
+			VAR _fW2    = FORMAT(ROUND(DIVIDE(_C2, _TR, 0) * 100, 0), "0")
+			VAR _fW1    = FORMAT(ROUND(DIVIDE(_C1, _TR, 0) * 100, 0), "0")
+			VAR _fRR    = FORMAT(_RiskR, "0.00")
+			VAR _fSR    = FORMAT(_StarR, "0.00")
+			VAR _fOR    = FORMAT(_OppR,  "0.00")
+			VAR _fRRv   = FORMAT(_RiskRv,"#,##0")
+			VAR _fSRv   = FORMAT(_StarRv,"#,##0")
+			
+			/* ══ SECTION 7 — SEMANTIC COLORS ════════════════════════ */
+			VAR _cAvg  = IF(_AvgR  >= 4.2, "#10B981", IF(_AvgR  >= 3.5, "#F59E0B", "#EF4444"))
+			VAR _cWtd  = IF(_WtdR  >= 4.2, "#10B981", IF(_WtdR  >= 3.5, "#F59E0B", "#EF4444"))
+			VAR _cCSI  = IF(_CSI   >= 75,  "#10B981", IF(_CSI   >= 55,  "#F59E0B", "#EF4444"))
+			VAR _cGap  = IF(_GapA  <= 0.3, "#10B981", IF(_GapA  <  0.6, "#F59E0B", "#EF4444"))
+			VAR _cDine = IF(_DineA >= 4.2, "#10B981", IF(_DineA >= 3.5, "#F59E0B", "#EF4444"))
+			VAR _cTake = IF(_TakeA >= 4.2, "#10B981", IF(_TakeA >= 3.5, "#F59E0B", "#EF4444"))
+			VAR _cDel  = IF(_DelA  >= 4.2, "#10B981", IF(_DelA  >= 3.5, "#F59E0B", "#EF4444"))
+			VAR _kAvg  = IF(_AvgR  >= 4.2, "g", IF(_AvgR  >= 3.5, "a", "r"))
+			VAR _kPos  = IF(_PosP  >= 0.7, "g", IF(_PosP  >= 0.5, "a", "r"))
+			VAR _kNeg  = IF(_NegP  <= 0.08,"g", IF(_NegP  <= 0.15,"a", "r"))
+			VAR _kCSI  = IF(_CSI   >= 75,  "g", IF(_CSI   >= 55,  "a", "r"))
+			VAR _S1    = IF(_AvgR >= 1,   "#F59E0B", "#E2E8F0")
+			VAR _S2    = IF(_AvgR >= 2,   "#F59E0B", "#E2E8F0")
+			VAR _S3    = IF(_AvgR >= 3,   "#F59E0B", "#E2E8F0")
+			VAR _S4    = IF(_AvgR >= 4,   "#F59E0B", "#E2E8F0")
+			VAR _S5    = IF(_AvgR >= 4.5, "#F59E0B", "#E2E8F0")
+			VAR _gBg   = IF(_GapA <= 0.3, "#ECFDF5", IF(_GapA < 0.6, "#FFFBEB", "#FEF2F2"))
+			VAR _gTx   = IF(_GapA <= 0.3, "#065F46", IF(_GapA < 0.6, "#B45309", "#991B1B"))
+			VAR _gMsg  = IF(_GapA <= 0.3, "✓ Channels aligned",
+			             IF(_GapA <  0.6, "⚠ Moderate gap — monitor",
+			                               "✕ Critical gap — urgent action"))
+			VAR _gDir  = IF(_Gap > 0, "below", IF(_Gap < 0, "above", "equal to"))
+			VAR _rec   =
+			    IF(_GapA > 0.5,
+			       "Delivery is " & _fGap & " pts below Dine-in. Focus on packaging and ETA accuracy. Deploy a targeted exit survey this week.",
+			    IF(_CSI < 55,
+			       "CSI at " & _fCSI & "/100 is below threshold. Address " & _RiskNm & " first — highest revenue with lowest rating equals maximum brand risk.",
+			    IF(_NegP > 0.15,
+			       "Negative reviews at " & _fNeg & "% exceed the 15% alert level. Root-cause the 1-2 star orders this week.",
+			       "Stable at CSI " & _fCSI & ". Scale " & _StarNm & " in marketing. Refine " & _OppNm & " quality for the highest CSI leverage.")))
+			
+			/* ══ SECTION 8 — HTML FRAGMENTS ════════════════════════ */
+			
+			/* Filter status bar */
+			VAR _hFBar =
+			    "<div class='fbar'>"
+			    & "<span class='fb-lbl'>&#128269; Active filters</span>"
+			    & "<div class='fb-sep'></div>"
+			    & "<div class='chip chip-" & _ChipCat  & "'><span class='chip-k'>Category</span><span class='chip-v'>" & _LblCat  & "</span>" & IF(_ChipCat  = "on","<span class='chip-dot'></span>","") & "</div>"
+			    & "<div class='chip chip-" & _ChipBrch & "'><span class='chip-k'>Branch</span><span class='chip-v'>"   & _LblBrch & "</span>" & IF(_ChipBrch = "on","<span class='chip-dot'></span>","") & "</div>"
+			    & "<div class='chip chip-" & _ChipPay  & "'><span class='chip-k'>Payment</span><span class='chip-v'>"  & _LblPay  & "</span>" & IF(_ChipPay  = "on","<span class='chip-dot'></span>","") & "</div>"
+			    & "<span class='fb-count'>" & _fTR & " reviews</span>"
+			    & "</div>"
+			
+			/* Top-5 items */
+			VAR _hItems =
+			    IF(_IC = 0, "<p class='nd'>No items in current context</p>",
+			    CONCATENATEX(
+			        TOPN(5, _IF, [@WR], DESC),
+			        VAR _c  = IF([@WR] >= 4.2, "#10B981", IF([@WR] >= 3.5, "#F59E0B", "#EF4444"))
+			        VAR _bg = IF([@WR] >= 4.2, "#ECFDF5", IF([@WR] >= 3.5, "#FFFBEB", "#FEF2F2"))
+			        VAR _tx = IF([@WR] >= 4.2, "#065F46", IF([@WR] >= 3.5, "#B45309", "#991B1B"))
+			        VAR _bw = FORMAT(ROUND([@WR] / 5 * 100, 0), "0")
+			        VAR _wf = FORMAT([@WR], "0.00")
+			        VAR _vf = FORMAT([@Rev], "#,##0")
+			        VAR _qf = FORMAT([@SumQ], "#,##0")
+			        RETURN
+			        "<div class='ir'>"
+			        & "<div class='il'><b class='in'>" & [item_name] & "</b>"
+			        & "<span class='iv'>" & _qf & " sold · " & _vf & " EGP</span></div>"
+			        & "<div class='ig'><div class='ibg'><div class='ib' style='width:" & _bw & "%;background:" & _c & "'></div></div>"
+			        & "<span class='ibd' style='background:" & _bg & ";color:" & _tx & "'>" & _wf & "&#9733;</span></div></div>",
+			        "", [@WR], DESC))
+			
+			/* Revenue matrix */
+			VAR _hMtx =
+			    IF(_IC = 0, "<p class='nd'>No data</p>",
+			    CONCATENATEX(
+			        TOPN(5, _IF, [@Rev], DESC),
+			        VAR _bg = IF([@WR] >= 4.2, "#ECFDF5", IF([@WR] >= 3.5, "#FFFBEB", "#FEF2F2"))
+			        VAR _tx = IF([@WR] >= 4.2, "#065F46", IF([@WR] >= 3.5, "#B45309", "#991B1B"))
+			        VAR _lb = IF([@WR] >= 4.2, "&#9733; Star", IF([@WR] >= 3.5, "&#9675; Solid", "&#9888; Risk"))
+			        VAR _wf = FORMAT([@WR], "0.00")
+			        VAR _vf = FORMAT([@Rev], "#,##0")
+			        VAR _rp = FORMAT(ROUND(DIVIDE([@Rev], _MaxRev, 0) * 100, 0), "0")
+			        RETURN
+			        "<div class='mr'>"
+			        & "<div class='mi'><b class='mn'>" & [item_name] & "</b>"
+			        & "<div class='mbt'><div style='width:" & _rp & "%;height:100%;background:#C7D2FE;border-radius:2px'></div></div>"
+			        & "<span class='mv'>" & _vf & " EGP</span></div>"
+			        & "<span class='mp' style='background:" & _bg & ";color:" & _tx & "'>" & _lb & "<br><b>" & _wf & "&#9733;</b></span></div>",
+			        "", [@Rev], DESC))
+			
+			/* Trend */
+			VAR _hTrend =
+			    IF(COUNTROWS(_TD) = 0,
+			       "<p class='nd'>No trend data — verify calendar · order_date relationship</p>",
+			    CONCATENATEX(
+			        _TD,
+			        VAR _r  = [@R]
+			        VAR _h  = FORMAT(ROUND(DIVIDE(_r - _TMin, _TRng, 0) * 68 + 18, 0), "0")
+			        VAR _c  = IF(_r >= 4.2, "#10B981", IF(_r >= 3.5, "#F59E0B", "#EF4444"))
+			        VAR _rf = FORMAT(_r, "0.00")
+			        RETURN
+			        "<div class='tc'><span class='tv' style='color:" & _c & "'>" & _rf & "</span>"
+			        & "<div class='tbg'><div class='tb' style='height:" & _h & "%;background:" & _c & "'></div></div>"
+			        & "<span class='tl'>" & [MonthYear] & "</span></div>",
+			        "", [@S], ASC))
+			
+			/* ══ SECTION 9 — RETURN ═════════════════════════════════ */
+			RETURN
+			IF(NOT _HasData,
+			"<div style='font-family:Segoe UI,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:220px;gap:10px;color:#64748B;text-align:center;padding:40px'><div style='font-size:42px'>&#128202;</div><div style='font-size:16px;font-weight:700;color:#0F172A;margin-top:4px'>No data in current filter context</div><div style='font-size:11px;margin-top:4px'>Use the slicers to adjust your selection</div></div>",
+			
+			"<!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'><style>
+			*{margin:0;padding:0;box-sizing:border-box}
+			:root{
+			  --g:#10B981;--gbg:#ECFDF5;--gtx:#065F46;
+			  --a:#F59E0B;--abg:#FFFBEB;--atx:#B45309;
+			  --r:#EF4444;--rbg:#FEF2F2;--rtx:#991B1B;
+			  --b:#3B82F6;--bbg:#EFF6FF;--btx:#1D4ED8;
+			  --p:#8B5CF6;--pbg:#F5F3FF;--ptx:#5B21B6;
+			  --ink:#0F172A;--sl:#334155;--mu:#64748B;
+			  --bd:#E2E8F0;--sf:#F8FAFC;--cd:#FFFFFF;
+			  --cy:#38BDF8;
+			  --sh:0 1px 3px rgba(15,23,42,.06),0 1px 2px rgba(15,23,42,.04);
+			  --r16:16px;--r12:12px;--r8:8px;--r6:6px
+			}
+			body{font-family:'Segoe UI',system-ui,sans-serif;background:#F1F5F9;color:var(--ink);font-size:12px;padding:12px;line-height:1.5}
+			.pg{display:flex;flex-direction:column;gap:12px}
+			
+			/* ── HEADER (no KPI strip) ────────── */
+			.hdr{
+			  background:var(--ink);border-radius:var(--r16);
+			  padding:20px 24px;border-bottom:2px solid var(--cy)
+			}
+			.hdr-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+			.htit{font-size:18px;font-weight:700;color:#F8FAFC;letter-spacing:-.02em;line-height:1.2}
+			.htit-icon{margin-right:6px}
+			.hmeta{margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+			.hbadge{
+			  display:inline-flex;align-items:center;gap:5px;
+			  background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.25);
+			  border-radius:20px;padding:3px 11px;
+			  font-size:9px;font-weight:600;color:var(--cy)
+			}
+			.hbadge-dot{width:5px;height:5px;border-radius:50%;background:var(--cy);flex-shrink:0}
+			.hdate{font-size:9px;color:#64748B}
+			
+			/* ── FILTER STATUS BAR ────────────── */
+			.fbar{
+			  background:var(--cd);border:1px solid var(--bd);
+			  border-radius:var(--r12);padding:8px 14px;
+			  display:flex;align-items:center;gap:6px;
+			  flex-wrap:wrap;box-shadow:var(--sh)
+			}
+			.fb-lbl{font-size:9px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;flex-shrink:0}
+			.fb-sep{width:1px;height:16px;background:var(--bd);flex-shrink:0;margin:0 2px}
+			.chip{
+			  display:inline-flex;align-items:center;gap:4px;
+			  padding:3px 10px;border-radius:20px;
+			  border:1px solid var(--bd);background:var(--sf);
+			  font-size:9px;color:var(--mu);white-space:nowrap
+			}
+			.chip-on{background:#EFF6FF;border-color:#BFDBFE;color:#1D4ED8;font-weight:600}
+			.chip-k{font-size:8px;opacity:.7;margin-right:1px}
+			.chip-on .chip-k{color:#60A5FA;opacity:1}
+			.chip-v{max-width:100px;overflow:hidden;text-overflow:ellipsis}
+			.chip-dot{width:5px;height:5px;border-radius:50%;background:#3B82F6;flex-shrink:0;margin-left:2px}
+			.fb-count{margin-left:auto;font-size:9px;font-weight:700;color:var(--mu);white-space:nowrap;padding:3px 10px;background:var(--sf);border:1px solid var(--bd);border-radius:20px}
+			
+			/* ── SECTION LABEL ────────────────── */
+			.sec{font-size:9px;font-weight:700;color:var(--mu);letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+			.sec::after{content:'';flex:1;height:1px;background:var(--bd)}
+			
+			/* ── KPI GRID ─────────────────────── */
+			.kg{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+			.kc{background:var(--cd);border:1px solid var(--bd);border-radius:var(--r12);padding:18px 18px 15px;box-shadow:var(--sh);position:relative;overflow:hidden}
+			.kc::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:var(--r12) var(--r12) 0 0}
+			.kc.g::before{background:var(--g)}.kc.a::before{background:var(--a)}.kc.r::before{background:var(--r)}.kc.b::before{background:var(--b)}.kc.p::before{background:var(--p)}
+			.ki{position:absolute;top:16px;right:16px;font-size:20px;opacity:.35}
+			.kl{font-size:9px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px}
+			.kv{font-size:30px;font-weight:700;line-height:1;letter-spacing:-.03em;margin-bottom:5px}
+			.kc.g .kv{color:var(--g)}.kc.a .kv{color:var(--a)}.kc.r .kv{color:var(--r)}.kc.b .kv{color:var(--b)}.kc.p .kv{color:var(--p)}
+			.ks{font-size:10px;color:var(--mu);line-height:1.3}
+			.kst{display:flex;gap:2px;margin-top:6px}
+			.kst span{font-size:15px}
+			
+			/* ── CARD ─────────────────────────── */
+			.cd{background:var(--cd);border:1px solid var(--bd);border-radius:var(--r12);padding:16px;box-shadow:var(--sh)}
+			.ch2{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+			.ct{font-size:10px;font-weight:700;color:var(--ink);text-transform:uppercase;letter-spacing:.05em}
+			.cs{font-size:9px;color:var(--mu);margin-top:2px}
+			.bdg{font-size:8px;padding:3px 9px;border-radius:20px;font-weight:700;white-space:nowrap;flex-shrink:0}
+			.b-b{background:var(--bbg);color:var(--btx)}.b-g{background:var(--gbg);color:var(--gtx)}
+			.b-a{background:var(--abg);color:var(--atx)}.b-p{background:var(--pbg);color:var(--ptx)}
+			
+			/* ── LAYOUTS ──────────────────────── */
+			.g3{display:grid;grid-template-columns:5fr 7fr 5fr;gap:10px}
+			.g2{display:grid;grid-template-columns:7fr 5fr;gap:10px}
+			.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+			
+			/* ── DISTRIBUTION ─────────────────── */
+			.dr{display:flex;align-items:center;gap:7px;margin-bottom:7px}
+			.dr:last-child{margin-bottom:0}
+			.dl{width:26px;font-size:10px;font-weight:700;color:var(--sl);flex-shrink:0}
+			.ds{width:44px;flex-shrink:0;color:#F59E0B;font-size:10px;letter-spacing:-1.5px}
+			.dt{flex:1;height:8px;background:#F1F5F9;border-radius:4px;overflow:hidden}
+			.df{height:100%;border-radius:4px}
+			.dn{width:38px;text-align:right;font-size:10px;font-weight:700;flex-shrink:0}
+			.dp{width:26px;text-align:right;font-size:9px;color:var(--mu);flex-shrink:0}
+			.sb{display:flex;height:5px;border-radius:3px;overflow:hidden;margin-top:10px}
+			.lg{display:flex;gap:10px;margin-top:7px;font-size:9px;flex-wrap:wrap}
+			.ld{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:3px;vertical-align:middle}
+			
+			/* ── TREND ────────────────────────── */
+			.tch{display:flex;align-items:flex-end;gap:6px;height:90px;padding:0 2px}
+			.tc{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:3px}
+			.tbg{flex:1;width:100%;display:flex;align-items:flex-end}
+			.tb{width:100%;border-radius:4px 4px 0 0;min-height:5px}
+			.tv{font-size:8px;font-weight:700}
+			.tl{font-size:7px;color:var(--mu);white-space:nowrap}
+			.ta{display:flex;align-items:center;gap:6px;margin-top:9px;padding:6px 9px;background:var(--sf);border-radius:var(--r6);font-size:9px}
+			.tn{font-size:9px;color:var(--mu);margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)}
+			
+			/* ── CHANNEL ──────────────────────── */
+			.cr{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+			.cr:last-child{margin-bottom:0}
+			.cl{width:64px;font-size:10px;font-weight:600;color:var(--sl);flex-shrink:0}
+			.ctr{flex:1;height:8px;background:#F1F5F9;border-radius:4px;overflow:hidden}
+			.cf{height:100%;border-radius:4px}
+			.cv{width:30px;text-align:right;font-size:11px;font-weight:700;flex-shrink:0}
+			.dv{height:1px;background:var(--bd);margin:11px 0}
+			.gl{font-size:9px;font-weight:700;color:var(--mu);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+			.gv{font-size:24px;font-weight:800;line-height:1}
+			.gd{font-size:10px;color:var(--mu);margin-left:5px;vertical-align:middle}
+			.gb{margin-top:9px;padding:7px 10px;border-radius:var(--r6);font-size:9px;font-weight:600;display:flex;align-items:center;gap:5px}
+			
+			/* ── ITEMS ────────────────────────── */
+			.ir{display:flex;align-items:center;padding:8px 0;border-bottom:1px solid var(--sf)}
+			.ir:last-child{border-bottom:none}
+			.il{flex:1;min-width:0;margin-right:10px}
+			.in{display:block;font-size:10px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+			.iv{display:block;font-size:9px;color:var(--mu);margin-top:1px}
+			.ig{display:flex;align-items:center;gap:7px;flex-shrink:0}
+			.ibg{width:68px;height:5px;background:#F1F5F9;border-radius:3px;overflow:hidden}
+			.ib{height:100%;border-radius:3px}
+			.ibd{padding:3px 8px;border-radius:var(--r6);font-size:10px;font-weight:700;white-space:nowrap}
+			
+			/* ── MATRIX ───────────────────────── */
+			.mr{display:flex;align-items:center;padding:8px 10px;border-radius:var(--r6);background:var(--sf);gap:8px;margin-bottom:4px}
+			.mr:last-child{margin-bottom:0}
+			.mi{flex:1;min-width:0}
+			.mn{display:block;font-size:9px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:3px}
+			.mbt{height:3px;background:var(--bd);border-radius:2px;overflow:hidden;margin-bottom:3px}
+			.mv{display:block;font-size:8px;color:var(--mu)}
+			.mp{display:block;padding:5px 9px;border-radius:var(--r6);font-size:8px;font-weight:700;text-align:center;min-width:54px;line-height:1.5;flex-shrink:0}
+			
+			/* ── INSIGHT CARDS ────────────────── */
+			.ic{border-radius:var(--r12);padding:14px;border:1px solid transparent;position:relative;overflow:hidden}
+			.ic::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+			.ic-r{background:var(--rbg);border-color:#FECACA}.ic-r::before{background:var(--r)}
+			.ic-g{background:var(--gbg);border-color:#A7F3D0}.ic-g::before{background:var(--g)}
+			.ic-a{background:var(--abg);border-color:#FDE68A}.ic-a::before{background:var(--a)}
+			.ic-b{background:var(--bbg);border-color:#BFDBFE}.ic-b::before{background:var(--b)}
+			.itg{font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;display:flex;align-items:center;gap:4px}
+			.ic-r .itg{color:var(--rtx)}.ic-g .itg{color:var(--gtx)}.ic-a .itg{color:var(--atx)}.ic-b .itg{color:var(--btx)}
+			.itd{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+			.in2{font-size:14px;font-weight:700;color:var(--ink);line-height:1.2;margin-bottom:3px}
+			.im2{font-size:9px;color:var(--mu);margin-bottom:6px;line-height:1.4}
+			.ib2{font-size:9px;line-height:1.6;color:var(--sl)}
+			
+			/* ── REC BOX ──────────────────────── */
+			.rb{background:var(--ink);border-radius:var(--r12);padding:14px 18px;display:flex;gap:13px;align-items:flex-start}
+			.ri{font-size:20px;flex-shrink:0;margin-top:1px}
+			.rt{font-size:9px;font-weight:700;color:var(--cy);text-transform:uppercase;letter-spacing:.09em;margin-bottom:5px}
+			.rbd{font-size:10px;color:#CBD5E1;line-height:1.7}
+			
+			/* ── FOOTER ───────────────────────── */
+			.ft{display:flex;gap:10px;font-size:9px;color:var(--mu);padding:9px 14px;background:var(--cd);border-radius:var(--r8);border:1px solid var(--bd);align-items:center;flex-wrap:wrap}
+			.fl{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:3px;vertical-align:middle}
+			.nd{text-align:center;color:var(--mu);font-size:10px;padding:20px;border:1px dashed var(--bd);border-radius:var(--r8);font-style:italic}
+			</style></head><body><div class='pg'>
+			
+			<!-- HEADER — clean, no KPI strip -->
+			<div class='hdr'>
+			  <div class='hdr-top'>
+			    <div>
+			      <div class='htit'><span class='htit-icon'>&#11088;</span>Customer Reviews &amp; Satisfaction</div>
+			    </div>
+			  </div>
+			  <div class='hmeta'>
+			    <div class='hbadge'><span class='hbadge-dot'></span>Live dashboard</div>
+			    <span class='hdate'>Responds to all slicers · " & _fTR & " reviews in current context</span>
+			  </div>
+			</div>
+			
+			<!-- FILTER STATUS BAR -->
+			" & _hFBar & "
+			
+			<!-- KPI CARDS — single source of truth -->
+			<div class='sec'>Performance Overview</div>
+			<div class='kg'>
+			  <div class='kc " & _kAvg & "'>
+			    <div class='ki'>&#11088;</div>
+			    <div class='kl'>Avg Rating</div>
+			    <div class='kv'>" & _fAvg & "</div>
+			    <div class='kst'>
+			      <span style='color:" & _S1 & "'>&#9733;</span>
+			      <span style='color:" & _S2 & "'>&#9733;</span>
+			      <span style='color:" & _S3 & "'>&#9733;</span>
+			      <span style='color:" & _S4 & "'>&#9733;</span>
+			      <span style='color:" & _S5 & "'>&#9733;</span>
+			    </div>
+			  </div>
+			  <div class='kc b'>
+			    <div class='ki'>&#128203;</div>
+			    <div class='kl'>Total Reviews</div>
+			    <div class='kv'>" & _fTR & "</div>
+			    <div class='ks'>Current context</div>
+			  </div>
+			  <div class='kc " & _kPos & "'>
+			    <div class='ki'>&#128077;</div>
+			    <div class='kl'>Positive %</div>
+			    <div class='kv'>" & _fPos & "%</div>
+			    <div class='ks'>Rating ≥ 4 stars</div>
+			  </div>
+			  <div class='kc " & _kNeg & "'>
+			    <div class='ki'>&#128078;</div>
+			    <div class='kl'>Negative %</div>
+			    <div class='kv'>" & _fNeg & "%</div>
+			    <div class='ks'>Rating ≤ 2 stars</div>
+			  </div>
+			  <div class='kc " & _kCSI & "'>
+			    <div class='ki'>&#127942;</div>
+			    <div class='kl'>CSI Score</div>
+			    <div class='kv'>" & _fCSI & "</div>
+			    <div class='ks'>Target: 85.0</div>
+			  </div>
+			</div>
+			
+			<!-- SECTION 1: DISTRIBUTION + TREND + CHANNEL -->
+			<div class='sec'>Rating Distribution &amp; Trend</div>
+			<div class='g3'>
+			  <div class='cd'>
+			    <div class='ch2'><div><div class='ct'>Distribution</div><div class='cs'>Count per star level</div></div><span class='bdg b-b'>Chart</span></div>
+			    <div class='dr'><div class='dl'>5&#9733;</div><div class='ds'>&#9733;&#9733;&#9733;&#9733;&#9733;</div><div class='dt'><div class='df' style='width:" & _fW5 & "%;background:#10B981'></div></div><div class='dn' style='color:#10B981'>" & _C5 & "</div><div class='dp'>" & _fW5 & "%</div></div>
+			    <div class='dr'><div class='dl'>4&#9733;</div><div class='ds'>&#9733;&#9733;&#9733;&#9733;</div><div class='dt'><div class='df' style='width:" & _fW4 & "%;background:#34D399'></div></div><div class='dn' style='color:#059669'>" & _C4 & "</div><div class='dp'>" & _fW4 & "%</div></div>
+			    <div class='dr'><div class='dl'>3&#9733;</div><div class='ds'>&#9733;&#9733;&#9733;</div><div class='dt'><div class='df' style='width:" & _fW3 & "%;background:#F59E0B'></div></div><div class='dn' style='color:#D97706'>" & _C3 & "</div><div class='dp'>" & _fW3 & "%</div></div>
+			    <div class='dr'><div class='dl'>2&#9733;</div><div class='ds'>&#9733;&#9733;</div><div class='dt'><div class='df' style='width:" & _fW2 & "%;background:#F87171'></div></div><div class='dn' style='color:#DC2626'>" & _C2 & "</div><div class='dp'>" & _fW2 & "%</div></div>
+			    <div class='dr'><div class='dl'>1&#9733;</div><div class='ds'>&#9733;</div><div class='dt'><div class='df' style='width:" & _fW1 & "%;background:#EF4444'></div></div><div class='dn' style='color:#DC2626'>" & _C1 & "</div><div class='dp'>" & _fW1 & "%</div></div>
+			    <div class='sb'><div style='width:" & _fPosB & "%;background:#10B981;height:100%'></div><div style='width:" & _fNeuB & "%;background:#E2E8F0;height:100%'></div><div style='width:" & _fNegB & "%;background:#EF4444;height:100%'></div></div>
+			    <div class='lg'>
+			      <span><span class='ld' style='background:#10B981'></span><span style='color:#065F46;font-weight:600'>Positive " & _fPos & "%</span></span>
+			      <span><span class='ld' style='background:#9CA3AF'></span><span style='color:var(--mu)'>Neutral " & _fNeu & "%</span></span>
+			      <span><span class='ld' style='background:#EF4444'></span><span style='color:#991B1B;font-weight:600'>Negative " & _fNeg & "%</span></span>
+			    </div>
+			  </div>
+			
+			  <div class='cd'>
+			    <div class='ch2'><div><div class='ct'>Rating Trend</div><div class='cs'>Last 6 months · monthly average</div></div><span class='bdg b-g'>Trend</span></div>
+			    <div class='tch'>" & _hTrend & "</div>
+			    <div class='ta'>
+			      <span style='font-size:15px;color:" & _TArrC & ";font-weight:800'>" & _TArr & "</span>
+			      <span style='font-weight:700;color:" & _TArrC & "'>" & _TDeltaFmt & " pts</span>
+			      <span style='color:var(--mu)'>vs prior month</span>
+			    </div>
+			    <div class='tn'>&#9632; ≥4.2 Excellent &nbsp;&#9632; ≥3.5 Good &nbsp;&#9632; &lt;3.5 At risk</div>
+			  </div>
+			
+			  <div class='cd'>
+			    <div class='ch2'><div><div class='ct'>By Order Type</div><div class='cs'>Avg rating per channel</div></div><span class='bdg b-p'>Channel</span></div>
+			    <div class='cr'><div class='cl'>Dine-in</div><div class='ctr'><div class='cf' style='width:" & _fDineW & "%;background:" & _cDine & "'></div></div><div class='cv' style='color:" & _cDine & "'>" & _fDine & "</div></div>
+			    <div class='cr'><div class='cl'>Takeaway</div><div class='ctr'><div class='cf' style='width:" & _fTakeW & "%;background:" & _cTake & "'></div></div><div class='cv' style='color:" & _cTake & "'>" & _fTake & "</div></div>
+			    <div class='cr'><div class='cl'>Delivery</div><div class='ctr'><div class='cf' style='width:" & _fDelW & "%;background:" & _cDel & "'></div></div><div class='cv' style='color:" & _cDel & "'>" & _fDel & "</div></div>
+			    <div class='dv'></div>
+			    <div class='gl'>Delivery gap vs dine-in</div>
+			    <div><span class='gv' style='color:" & _cGap & "'>" & _fGap & "</span><span class='gd'>pts " & _gDir & " dine-in</span></div>
+			    <div class='gb' style='background:" & _gBg & ";color:" & _gTx & "'>" & _gMsg & "</div>
+			  </div>
+			</div>
+			
+			<!-- SECTION 2: ITEMS + MATRIX -->
+			<div class='sec'>Top Items &amp; Revenue Matrix</div>
+			<div class='g2'>
+			  <div class='cd'>
+			    <div class='ch2'><div><div class='ct'>Top 5 Items — Weighted Rating</div><div class='cs'>Qty-weighted · ranked by satisfaction</div></div><span class='bdg b-g'>Ranked</span></div>
+			    " & _hItems & "
+			  </div>
+			  <div class='cd'>
+			    <div class='ch2'><div><div class='ct'>Revenue vs Rating</div><div class='cs'>Top 5 by revenue · satisfaction tier</div></div><span class='bdg b-a'>Matrix</span></div>
+			    " & _hMtx & "
+			  </div>
+			</div>
+			
+			<!-- SECTION 3: INSIGHTS -->
+			<div class='sec'>Actionable Insights</div>
+			<div class='g4'>
+			  <div class='ic ic-r'>
+			    <div class='itg'><span class='itd' style='background:var(--r)'></span>Risk Alert</div>
+			    <div class='in2'>" & _RiskNm & "</div>
+			    <div class='im2'>Top-3 revenue · " & _fRR & "&#9733; · " & _fRRv & " EGP</div>
+			    <div class='ib2'>Highest-earning with weakest satisfaction. Quality gap at maximum scale. Immediate audit required.</div>
+			  </div>
+			  <div class='ic ic-g'>
+			    <div class='itg'><span class='itd' style='background:var(--g)'></span>Star Performer</div>
+			    <div class='in2'>" & _StarNm & "</div>
+			    <div class='im2'>Top-5 revenue · " & _fSR & "&#9733; · " & _fSRv & " EGP</div>
+			    <div class='ib2'>High volume AND high satisfaction. Quality benchmark. Feature in all promotions.</div>
+			  </div>
+			  <div class='ic ic-a'>
+			    <div class='itg'><span class='itd' style='background:var(--a)'></span>Growth Opportunity</div>
+			    <div class='in2'>" & _OppNm & "</div>
+			    <div class='im2'>High qty · " & _fOR & "&#9733; · " & FORMAT(_OppQ, "#,##0") & " units</div>
+			    <div class='ib2'>Above-avg volume, mid satisfaction. A 0.3&#9733; lift here gives the highest CSI gain per effort.</div>
+			  </div>
+			  <div class='ic ic-b'>
+			    <div class='itg'><span class='itd' style='background:var(--b)'></span>Delivery Insight</div>
+			    <div class='in2'>" & _fGap & " pt Gap</div>
+			    <div class='im2'>Dine-in " & _fDine & "&#9733; &nbsp;&#183;&nbsp; Delivery " & _fDel & "&#9733;</div>
+			    <div class='ib2'>" & _gMsg & ". " & IF(_GapA > 0.5, "Deploy exit survey — focus on packaging and ETA.", "Maintain standards and monitor monthly.") & "</div>
+			  </div>
+			</div>
+			
+			<!-- RECOMMENDATION -->
+			<div class='rb'>
+			  <div class='ri'>&#128204;</div>
+			  <div>
+			    <div class='rt'>Strategic Recommendation</div>
+			    <div class='rbd'>" & _rec & "</div>
+			  </div>
+			</div>
+			
+			<!-- FOOTER -->
+			<div class='ft'>
+			  <span style='font-weight:700;color:var(--ink)'>Scale:</span>
+			  <span><span class='fl' style='background:#10B981'></span>≥4.2 Excellent</span>
+			  <span><span class='fl' style='background:#F59E0B'></span>3.5–4.2 Good</span>
+			  <span><span class='fl' style='background:#EF4444'></span>&lt;3.5 At risk</span>
+			  <span style='margin-left:auto;font-weight:600;color:var(--ink)'>CSI " & _fCSI & "/100 · Wtd " & _fWtd & " · " & _fTR & " reviews</span>
+			</div>
+			
+			</div></body></html>"
+			)
+		lineageTag: d92f6e9d-8f84-4249-a6f3-8ab054b4f072
+
+	measure Measure
+		lineageTag: 6afa3aa2-a4aa-43df-9123-a8557d321bf4
+
+	measure 2ReviewsDashboard
+		lineageTag: bc8ec5b2-cc7f-4224-a284-240dec10bbbc
+
+	measure 'Average review per item' =
+			
+			CALCULATE (
+			    AVERAGE ( final_table_clean[rating] ),
+			    ALLEXCEPT ( final_table_clean, final_table_clean[item_name] )
+			)
+		lineageTag: 89ab7351-d30b-4c5d-913a-b75fb3003952
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure AI_Insight_Summary =
+			
+			
+			VAR CurrentSales =
+			    [Total Sales]
+			
+			VAR PreviousSales =
+			    CALCULATE(
+			        [Total Sales],
+			        DATEADD(calendar[Date], -1, YEAR)
+			    )
+			
+			VAR GrowthValue =
+			    DIVIDE(
+			        CurrentSales - PreviousSales,
+			        PreviousSales
+			    )
+			
+			VAR RevenueGrowth =
+			    FORMAT(GrowthValue, "+0.0%;-0.0%")
+			
+			VAR CSI =
+			    FORMAT([CSIScore], "0.0")
+			
+			VAR AvgRating =
+			    FORMAT([Average review], "0.00")
+			
+			VAR TotalSales =
+			    FORMAT([Total Sales] / 1000000000, "0.00") & "B"
+			
+			VAR Orders =
+			    FORMAT([Orders] / 1000000, "0.0") & "M"
+			
+			VAR Customers =
+			    FORMAT([Customer] / 1000, "0") & "K"
+			
+			VAR AOVValue =
+			    FORMAT([AOV], "0.00")
+			
+			
+			VAR TopRow =
+			    TOPN(
+			        1,
+			        FILTER(
+			            mba_rules,
+			            NOT ISBLANK(mba_rules[Product_A]) &&
+			            NOT ISBLANK(mba_rules[Product_B]) &&
+			            mba_rules[lift] > 1
+			        ),
+			        mba_rules[lift], DESC,
+			        mba_rules[confidence], DESC,
+			        mba_rules[support], DESC
+			    )
+			
+			VAR TopProductA =
+			    MAXX(
+			        TopRow,
+			        mba_rules[Product_A]
+			    )
+			
+			VAR TopProductB =
+			    MAXX(
+			        TopRow,
+			        mba_rules[Product_B]
+			    )
+			
+			VAR TopPair =
+			    TopProductA & " + " & TopProductB
+			
+			VAR BestBranch =
+			    TOPN(
+			        1,
+			        SUMMARIZE(
+			            final_table_clean,
+			            final_table_clean[branch],
+			            "SalesValue", [Total Sales]
+			        ),
+			        [SalesValue],
+			        DESC
+			    )
+			
+			VAR BranchName =
+			    CONCATENATEX(
+			        BestBranch,
+			        final_table_clean[branch],
+			        ", "
+			    )
+			
+			RETURN
+			
+			"
+			<div style='
+			width:100%;
+			padding:18px;
+			border-radius:22px;
+			
+			background:rgba(10,25,47,.45);
+			
+			backdrop-filter:blur(6px);
+			-webkit-backdrop-filter:blur(6px);
+			
+			border:1px solid rgba(255,255,255,.08);
+			
+			box-shadow:
+			0 4px 24px rgba(0,0,0,.28),
+			0 0 10px rgba(96,165,250,.08);
+			
+			font-family:Segoe UI;
+			color:white;
+			overflow:hidden;
+			'>
+			
+			<!-- HEADER -->
+			
+			<div style='
+			display:flex;
+			justify-content:space-between;
+			align-items:center;
+			margin-bottom:18px;
+			'>
+			
+			<div>
+			
+			<div style='
+			font-size:22px;
+			font-weight:700;
+			letter-spacing:.3px;
+			color:#F8FAFC;
+			'>
+			 Business Insights
+			</div>
+			
+			<div style='
+			font-size:11px;
+			color:#94A3B8;
+			margin-top:2px;
+			'>
+			Live AI-powered restaurant intelligence
+			</div>
+			
+			</div>
+			
+			<div style='
+			font-size:11px;
+			padding:6px 10px;
+			border-radius:30px;
+			background:rgba(59,130,246,.15);
+			color:#93C5FD;
+			border:1px solid rgba(147,197,253,.15);
+			'>
+			LIVE
+			</div>
+			
+			</div>
+			
+			<!-- KPI STRIP -->
+			
+			<div style='
+			display:grid;
+			grid-template-columns:repeat(2,1fr);
+			gap:10px;
+			margin-bottom:18px;
+			'>
+			
+			<div style='
+			background:rgba(255,255,255,.05);
+			padding:12px;
+			border-radius:14px;
+			'>
+			
+			<div style='
+			font-size:10px;
+			color:#94A3B8;
+			margin-bottom:4px;
+			'>
+			TOTAL SALES
+			</div>
+			
+			<div style='
+			font-size:22px;
+			font-weight:700;
+			color:#60A5FA;
+			'>
+			" & TotalSales & "
+			</div>
+			
+			</div>
+			
+			<div style='
+			background:rgba(255,255,255,.05);
+			padding:12px;
+			border-radius:14px;
+			'>
+			
+			<div style='
+			font-size:10px;
+			color:#94A3B8;
+			margin-bottom:4px;
+			'>
+			ORDERS
+			</div>
+			
+			<div style='
+			font-size:22px;
+			font-weight:700;
+			color:#F59E0B;
+			'>
+			" & Orders & "
+			</div>
+			
+			</div>
+			
+			<div style='
+			background:rgba(255,255,255,.05);
+			padding:12px;
+			border-radius:14px;
+			'>
+			
+			<div style='
+			font-size:10px;
+			color:#94A3B8;
+			margin-bottom:4px;
+			'>
+			CUSTOMERS
+			</div>
+			
+			<div style='
+			font-size:22px;
+			font-weight:700;
+			color:#10B981;
+			'>
+			" & Customers & "
+			</div>
+			
+			</div>
+			
+			<div style='
+			background:rgba(255,255,255,.05);
+			padding:12px;
+			border-radius:14px;
+			'>
+			
+			<div style='
+			font-size:10px;
+			color:#94A3B8;
+			margin-bottom:4px;
+			'>
+			AVG RATING
+			</div>
+			
+			<div style='
+			font-size:22px;
+			font-weight:700;
+			color:#FACC15;
+			'>
+			⭐ " & AvgRating & "
+			</div>
+			
+			</div>
+			
+			</div>
+			
+			<!-- INSIGHTS -->
+			
+			<div style='
+			display:flex;
+			flex-direction:column;
+			gap:12px;
+			'>
+			
+			<div style='
+			padding:12px;
+			border-radius:14px;
+			background:rgba(16,185,129,.08);
+			border-left:4px solid #10B981;
+			'>
+			
+			<div style='
+			font-size:13px;
+			font-weight:700;
+			color:#10B981;
+			margin-bottom:4px;
+			'>
+			✔ Revenue Growth
+			</div>
+			
+			<div style='
+			font-size:13px;
+			color:#E2E8F0;
+			'>
+			Revenue increased by
+			<b>" & RevenueGrowth & "</b>
+			compared to previous period.
+			</div>
+			
+			</div>
+			
+			<div style='
+			padding:12px;
+			border-radius:14px;
+			background:rgba(245,158,11,.08);
+			border-left:4px solid #F59E0B;
+			'>
+			
+			<div style='
+			font-size:13px;
+			font-weight:700;
+			color:#F59E0B;
+			margin-bottom:4px;
+			'>
+			✔ Customer Satisfaction
+			</div>
+			
+			<div style='
+			font-size:13px;
+			color:#E2E8F0;
+			'>
+			Current CSI reached
+			<b>" & CSI & "</b>
+			with strong positive feedback trends.
+			</div>
+			
+			</div>
+			
+			<div style='
+			padding:12px;
+			border-radius:14px;
+			background:rgba(96,165,250,.08);
+			border-left:4px solid #60A5FA;
+			'>
+			
+			<div style='
+			font-size:13px;
+			font-weight:700;
+			color:#60A5FA;
+			margin-bottom:4px;
+			'>
+			✔ Strongest Product Pair
+			</div>
+			
+			<div style='
+			font-size:13px;
+			font-weight:600;
+			color:#DBEAFE;
+			'>
+			" & TopPair & "
+			</div>
+			
+			</div>
+			
+			<div style='
+			padding:12px;
+			border-radius:14px;
+			background:rgba(52,211,153,.08);
+			border-left:4px solid #34D399;
+			'>
+			
+			<div style='
+			font-size:13px;
+			font-weight:700;
+			color:#34D399;
+			margin-bottom:4px;
+			'>
+			✔ Best Performing Branch
+			</div>
+			
+			<div style='
+			font-size:13px;
+			font-weight:600;
+			color:#D1FAE5;
+			'>
+			" & BranchName & "
+			</div>
+			
+			</div>
+			
+			</div>
+			
+			</div>
+			"
+		lineageTag: c64b485b-ed1b-4628-8aec-27940c770034
+
+	measure AI_Recommendations =
+			
+			
+			VAR CSI =
+			    [CSIScore]
+			
+			VAR PositiveRate =
+			    [PositivePercent]
+			
+			VAR DeliveryGap =
+			    [DeliveryAvg] - [DineInAvg]
+			
+			VAR WorstBranch =
+			    TOPN(
+			        1,
+			        SUMMARIZE(
+			            final_table_clean,
+			            final_table_clean[branch],
+			            "BranchRating", [Average review]
+			        ),
+			        [BranchRating],
+			        ASC
+			    )
+			
+			VAR WorstBranchName =
+			    CONCATENATEX(
+			        WorstBranch,
+			        final_table_clean[branch],
+			        ", "
+			    )
+			
+			VAR LowProduct =
+			    TOPN(
+			        1,
+			        SUMMARIZE(
+			            final_table_clean,
+			            final_table_clean[item_name],
+			            "ItemRating", [Average review]
+			        ),
+			        [ItemRating],
+			        ASC
+			    )
+			
+			VAR LowProductName =
+			    CONCATENATEX(
+			        LowProduct,
+			        final_table_clean[item_name],
+			        ", "
+			    )
+			
+			RETURN
+			
+			"
+			<div style='
+			width:100%;
+			padding:18px;
+			border-radius:22px;
+			
+			background:rgba(10,25,47,.45);
+			
+			backdrop-filter:blur(6px);
+			-webkit-backdrop-filter:blur(6px);
+			
+			border:1px solid rgba(255,255,255,.08);
+			
+			box-shadow:
+			0 4px 24px rgba(0,0,0,.28),
+			0 0 10px rgba(96,165,250,.08);
+			
+			font-family:Segoe UI;
+			color:white;
+			overflow:hidden;
+			'>
+			
+			<!-- HEADER -->
+			
+			<div style='
+			display:flex;
+			justify-content:space-between;
+			align-items:center;
+			margin-bottom:18px;
+			'>
+			
+			<div>
+			
+			<div style='
+			font-size:22px;
+			font-weight:700;
+			letter-spacing:.3px;
+			color:#F8FAFC;
+			'>
+			 Recommendations
+			</div>
+			
+			<div style='
+			font-size:11px;
+			color:#94A3B8;
+			margin-top:2px;
+			'>
+			Smart operational recommendations
+			</div>
+			
+			</div>
+			
+			<div style='
+			font-size:11px;
+			padding:6px 10px;
+			border-radius:30px;
+			background:rgba(7,15,30,.62);
+			color:#C4B5FD;
+			border:1px solid rgba(196,181,253,.15);
+			'>
+			AI ENGINE
+			</div>
+			
+			</div>
+			
+			<!-- RECOMMENDATIONS -->
+			
+			<div style='
+			display:flex;
+			flex-direction:column;
+			gap:14px;
+			'>
+			
+			<div style='
+			background:rgba(16,185,129,.08);
+			padding:14px;
+			border-radius:14px;
+			border-left:4px solid #10B981;
+			transition:all .25s ease;
+			'>
+			
+			<div style='
+			font-size:14px;
+			font-weight:700;
+			color:#10B981;
+			margin-bottom:6px;
+			'>
+			✔ Customer Experience
+			</div>
+			
+			<div style='
+			font-size:12px;
+			line-height:1.7;
+			color:#E2E8F0;
+			'>
+			Maintain customer satisfaction above
+			<b>" & FORMAT(CSI,"0.0") & "</b>
+			through service consistency and faster response handling.
+			</div>
+			
+			</div>
+			
+			<div style='
+			background:rgba(245,158,11,.08);
+			padding:14px;
+			border-radius:14px;
+			border-left:4px solid #F59E0B;
+			'>
+			
+			<div style='
+			font-size:14px;
+			font-weight:700;
+			color:#F59E0B;
+			margin-bottom:6px;
+			'>
+			⚠ Delivery Optimization
+			</div>
+			
+			<div style='
+			font-size:12px;
+			line-height:1.7;
+			color:#E2E8F0;
+			'>
+			Delivery gap is
+			<b>" & FORMAT(DeliveryGap,"0.00") & "</b>.
+			Improve delivery timing and packaging quality.
+			</div>
+			
+			</div>
+			
+			<div style='
+			background:rgba(239,68,68,.08);
+			padding:14px;
+			border-radius:14px;
+			border-left:4px solid #EF4444;
+			'>
+			
+			<div style='
+			font-size:14px;
+			font-weight:700;
+			color:#EF4444;
+			margin-bottom:6px;
+			'>
+			✖ Branch Attention Needed
+			</div>
+			
+			<div style='
+			font-size:12px;
+			line-height:1.7;
+			color:#E2E8F0;
+			'>
+			Immediate operational review required for branch:
+			<b>" & WorstBranchName & "</b>
+			due to low satisfaction performance.
+			</div>
+			
+			</div>
+			
+			<div style='
+			background:rgba(96,165,250,.08);
+			padding:14px;
+			border-radius:14px;
+			border-left:4px solid #60A5FA;
+			'>
+			
+			<div style='
+			font-size:14px;
+			font-weight:700;
+			color:#60A5FA;
+			margin-bottom:6px;
+			'>
+			★ Menu Improvement
+			</div>
+			
+			<div style='
+			font-size:12px;
+			line-height:1.7;
+			color:#E2E8F0;
+			'>
+			Review customer feedback for:
+			<b>" & LowProductName & "</b>
+			to improve product quality and overall experience.
+			</div>
+			
+			</div>
+			
+			<div style='
+			background:rgba(139,92,246,.08);
+			padding:14px;
+			border-radius:14px;
+			border-left:4px solid #8B5CF6;
+			'>
+			
+			<div style='
+			font-size:14px;
+			font-weight:700;
+			color:#8B5CF6;
+			margin-bottom:6px;
+			'>
+			📈 Growth Opportunity
+			</div>
+			
+			<div style='
+			font-size:12px;
+			line-height:1.7;
+			color:#E2E8F0;
+			'>
+			Positive review rate reached
+			<b>" & FORMAT(PositiveRate,"0.0%") & "</b>.
+			Promote high-rated products through marketing campaigns.
+			</div>
+			
+			</div>
+			
+			</div>
+			
+			</div>
+			"
+		lineageTag: a853bcff-48aa-4719-a2e5-3fe10c277473
+
+	column Column
+		isHidden
+		formatString: 0
+		lineageTag: c688993e-ad91-4902-b7b1-a506c9125151
+		summarizeBy: sum
+		isNameInferred
+		sourceColumn: [Column]
+
+		annotation SummarizationSetBy = Automatic
+
+	partition calcuation = calculated
+		mode: import
+		source = Row("Column", BLANK())
+
+	annotation PBI_Id = 6fa6202ee84a4009840c1af7f0866eac
+
+	annotation 436ba87b-9c83-4389-a31b-ebd06a36be98 = {"Expression":""}
+

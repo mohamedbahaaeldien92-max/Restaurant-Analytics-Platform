@@ -1,0 +1,39 @@
+table dim_customer
+	lineageTag: 0bd9e1e6-493c-4360-b7c0-de49e12917a9
+
+	column customer_id
+		dataType: int64
+		formatString: 0
+		sourceProviderType: bigint
+		lineageTag: 123849ff-eb61-47b0-ae12-503e95d4786c
+		summarizeBy: none
+		sourceColumn: customer_id
+
+		annotation SummarizationSetBy = Automatic
+
+	column first_order_year
+		dataType: int64
+		formatString: 0
+		sourceProviderType: int
+		lineageTag: c08b15bc-6633-401e-8418-ebcab01b7eb0
+		summarizeBy: none
+		sourceColumn: first_order_year
+
+		annotation SummarizationSetBy = Automatic
+
+	partition dim_customer = m
+		mode: directQuery
+		source =
+				let
+				    Source = DatabricksMultiCloud.Catalogs("dbc-331456cc-ae18.cloud.databricks.com", "/sql/1.0/warehouses/396b5eee0624a3cf", [Catalog=null, Database=null, QueryTags=null, EnableAutomaticProxyDiscovery=null, Implementation="2.0"]),
+				    workspace_Database = Source{[Name="workspace",Kind="Database"]}[Data],
+				    default_Schema = workspace_Database{[Name="default",Kind="Schema"]}[Data],
+				    dim_customer_Table = default_Schema{[Name="dim_customer",Kind="Table"]}[Data],
+				    #"Filtered Rows" = Table.SelectRows(dim_customer_Table, each true)
+				in
+				    #"Filtered Rows"
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

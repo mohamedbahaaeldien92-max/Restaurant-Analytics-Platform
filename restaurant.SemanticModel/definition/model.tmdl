@@ -1,0 +1,29 @@
+model Model
+	culture: en-US
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	sourceQueryCulture: en-US
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+annotation __PBI_TimeIntelligenceEnabled = 1
+
+annotation PBI_QueryOrder = ["final_table_clean","dim_customer","mba_rules","mba_rules_itemsets"]
+
+annotation PBI_ProTooling = ["TMDLView_Desktop","MCP-PBIModeling","DevMode"]
+
+ref table final_table_clean
+ref table calcuation
+ref table calendar
+ref table DateTableTemplate_ca295322-819e-4cb0-bcf9-de6fecbbb482
+ref table LocalDateTable_756e22da-bd16-45e1-836e-bf0c964ea78b
+ref table dim_customer
+ref table mba_rules
+ref table mba_rules_itemsets
+ref table topbotton
+ref table 'sales & Items'
+ref table Ranking
+ref table 'KPI Measures'
+
+ref cultureInfo en-US
+

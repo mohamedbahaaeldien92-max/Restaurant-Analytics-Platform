@@ -1,0 +1,66 @@
+table calendar
+	lineageTag: 1966e6ab-cad3-4e18-b8ab-e7c82b8627d9
+
+	column Date
+		formatString: dd/mm/yyyy
+		lineageTag: 76960a1e-6360-4769-8245-9b95fbc6b9b5
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Date]
+
+		variation Variation
+			isDefault
+			relationship: 28f3a729-d6d1-4163-b40c-13d43d3fa872
+			defaultHierarchy: LocalDateTable_756e22da-bd16-45e1-836e-bf0c964ea78b.'Date Hierarchy'
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+		annotation PBI_FormatHint = {"isDateTimeCustom":true}
+
+	column Year = YEAR('calendar'[Date])
+		formatString: 0
+		lineageTag: 1b0e1e74-e962-4d17-9582-48f0fd613c6f
+		summarizeBy: none
+
+		annotation SummarizationSetBy = User
+
+	column 'month number' = MONTH('calendar'[Date])
+		formatString: 0
+		lineageTag: 236c1204-6181-4ad6-8c34-12eeb8c9c91a
+		summarizeBy: sum
+
+		annotation SummarizationSetBy = Automatic
+
+	column Month = FORMAT('calendar'[Date], "mmm")
+		lineageTag: 50ea1242-e89a-48e8-b5fc-50531432e3b3
+		summarizeBy: none
+		sortByColumn: 'month number'
+
+		annotation SummarizationSetBy = Automatic
+
+	column 'Name of day' = FORMAT('calendar'[Date], "dddd")
+		lineageTag: 918e8811-b715-43da-94e2-d6295ecaa405
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+	column Quarter = "Q-"&QUARTER('calendar'[Date])
+		lineageTag: 9a841d37-5476-4282-8dfe-23808159c51d
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+	column MonthYear = FORMAT('calendar'[Date], "MMM YYYY")
+		lineageTag: 93984b00-3e2f-4c81-8c8b-2a348df53d35
+		summarizeBy: none
+
+		annotation SummarizationSetBy = Automatic
+
+	partition calendar = calculated
+		mode: import
+		source = CALENDARAUTO()
+
+	annotation PBI_Id = f093985f9fb7469f809f6999dad12c81
+

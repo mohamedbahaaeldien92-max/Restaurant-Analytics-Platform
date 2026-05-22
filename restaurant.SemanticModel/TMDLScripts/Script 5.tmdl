@@ -1,0 +1,95 @@
+createOrReplace
+
+    ref table 'KPI Measures'
+
+        measure AvgRating =
+            AVERAGE(final_table_clean[rating])
+
+        measure TotalReviews =
+            COUNTROWS(final_table_clean)
+
+        measure PositivePercent =
+            VAR Total = COUNTROWS(final_table_clean)
+            VAR Positive =
+                COUNTROWS(
+                    FILTER(final_table_clean, final_table_clean[rating] >= 4)
+                )
+            RETURN IF(Total = 0, 0, Positive / Total)
+
+        measure NegativePercent =
+            VAR Total = COUNTROWS(final_table_clean)
+            VAR Negative =
+                COUNTROWS(
+                    FILTER(final_table_clean, final_table_clean[rating] <= 2)
+                )
+            RETURN IF(Total = 0, 0, Negative / Total)
+
+        measure CSIScore =
+            VAR Pos =
+                VAR Total = COUNTROWS(final_table_clean)
+                VAR Positive =
+                    COUNTROWS(
+                        FILTER(final_table_clean, final_table_clean[rating] >= 4)
+                    )
+                RETURN IF(Total = 0, 0, Positive / Total)
+
+            VAR Neg =
+                VAR Total = COUNTROWS(final_table_clean)
+                VAR Negative =
+                    COUNTROWS(
+                        FILTER(final_table_clean, final_table_clean[rating] <= 2)
+                    )
+                RETURN IF(Total = 0, 0, Negative / Total)
+
+            RETURN (Pos - Neg + 1) / 2
+
+        measure Rating1Count =
+            CALCULATE(COUNTROWS(final_table_clean), final_table_clean[rating] = 1)
+
+        measure Rating2Count =
+            CALCULATE(COUNTROWS(final_table_clean), final_table_clean[rating] = 2)
+
+        measure Rating3Count =
+            CALCULATE(COUNTROWS(final_table_clean), final_table_clean[rating] = 3)
+
+        measure Rating4Count =
+            CALCULATE(COUNTROWS(final_table_clean), final_table_clean[rating] = 4)
+
+        measure Rating5Count =
+            CALCULATE(COUNTROWS(final_table_clean), final_table_clean[rating] = 5)
+
+        measure DineInAvg =
+            CALCULATE(
+                AVERAGE(final_table_clean[rating]),
+                final_table_clean[order_type] = "Dine-in"
+            )
+
+        measure TakeawayAvg =
+            CALCULATE(
+                AVERAGE(final_table_clean[rating]),
+                final_table_clean[order_type] = "Takeaway"
+            )
+
+        measure DeliveryAvg =
+            CALCULATE(
+                AVERAGE(final_table_clean[rating]),
+                final_table_clean[order_type] = "Delivery"
+            )
+
+        measure Top10Items =
+            VAR ItemStats =
+                ADDCOLUMNS(
+                    VALUES(final_table_clean[item_name]),
+                    "@AvgRating", CALCULATE(AVERAGE(final_table_clean[rating]))
+                )
+            VAR SortedItems =
+                TOPN(10, ItemStats, [@AvgRating], DESC)
+            RETURN
+                CONCATENATEX(
+                    SortedItems,
+                    "<div>" & [item_name] & " - " & FORMAT([@AvgRating], "0.00") & "</div>",
+                    ""
+                )
+
+        measure DistributionHTML =
+            "<div>Ready</div>"

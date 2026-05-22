@@ -1,0 +1,46 @@
+createOrReplace
+
+	table 'sales & Items'
+		lineageTag: 53610c0f-32f1-486c-b350-cfed72ec4689
+
+		column 'sales & Items'
+			lineageTag: 11498430-19d8-4f10-8a04-49064ecdfdb4
+			summarizeBy: none
+			sourceColumn: [Value1]
+			sortByColumn: 'sales & Items Order'
+
+			relatedColumnDetails
+				groupByColumn: 'sales & Items Fields'
+
+			annotation SummarizationSetBy = Automatic
+
+		column 'sales & Items Fields'
+			isHidden
+			lineageTag: 57e6a230-888a-4be5-933a-81e3c112d495
+			summarizeBy: none
+			sourceColumn: [Value2]
+			sortByColumn: 'sales & Items Order'
+
+			extendedProperty ParameterMetadata = {"version":3,"kind":2}
+
+			annotation SummarizationSetBy = Automatic
+
+		column 'sales & Items Order'
+			isHidden
+			formatString: 0
+			lineageTag: 65c9afcb-0652-4d01-8e84-d3535aefc92b
+			summarizeBy: sum
+			sourceColumn: [Value3]
+
+			annotation SummarizationSetBy = Automatic
+
+		partition 'sales & Items' = calculated
+			mode: import
+			source =
+					{
+					    ("Sales", NAMEOF('calcuation'[Sales]), 0),
+					    ("Items", NAMEOF('calcuation'[Items]), 1)
+					}
+
+		annotation PBI_Id = d1e52df1af8149c19782c92b20b9b62b
+

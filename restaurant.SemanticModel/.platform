@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "SemanticModel",
+    "displayName": "restaurant"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "30092b0f-1b7a-43d3-a120-619ee75992fb"
+  }
+}
